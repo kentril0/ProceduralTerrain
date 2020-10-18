@@ -19,8 +19,8 @@ Controllable FPS camera suspended above a generated mesh with predefined dimensi
 ### NOT WORKING FOR WINDOWS, yet!
 
 ### Requirements:
-* C++11
-* min. CMake 3.1
+* C++17
+* min. CMake 3.2
 * min. OpenGL 4.5 compatible GPU
 * TODO other hardware requirements
 
