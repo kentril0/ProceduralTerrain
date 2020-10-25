@@ -24,8 +24,8 @@ Controllable FPS camera suspended above a generated mesh with predefined dimensi
 * TODO other hardware requirements
 
 In root directory of this project:
-$ mkdir build && cd build
-$ cmake ..
+* mkdir build && cd build
+* cmake ..
 
 ## Used libraries
 TODO links

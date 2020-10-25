@@ -4,7 +4,7 @@
 
 
 const float Camera::DEFAULT_YAW       = -90.0f;
-const float Camera::DEFAULT_PITCH     = 0.0f;
+const float Camera::DEFAULT__PITCH    = 0.0f;
 const float Camera::DEFAULT_SPEED     = 2.5f;
 const float Camera::DEFAULT_ZOOM      = 45.0f;
 const float Camera::MOUSE_SENSITIVITY = 0.1f;
@@ -12,8 +12,8 @@ const float Camera::ZOOM_SENSITIVITY  = 45.1f;
 const float Camera::MOVE_SPEED        = 10.0f;
 
 const float Camera::DEFAULT_FOV       = 45.0f;
-const float Camera::DEFAULT_NEAR      = 0.01f;
-const float Camera::DEFAULT_FAR       = 1000.0f;
+const float Camera::DEFAULT_NEAR_PLANE= 0.01f;
+const float Camera::DEFAULT_FAR_PLANE = 1000.0f;
 
 const float Camera::MAX_PITCH         = 89.0f;
 const float Camera::MIN_PITCH         = -89.0f;
@@ -33,7 +33,7 @@ Camera::Camera(float aspect_ratio, const glm::vec3& pos, const glm::vec3& up,
     up(up), 
     aspect_ratio(aspect_ratio),
     fov(glm::radians(DEFAULT_FOV)),
-    near(DEFAULT_NEAR), far(DEFAULT_FAR),
+    near_plane(DEFAULT_NEAR_PLANE), far_plane(DEFAULT_FAR_PLANE),
     yaw(yaw), pitch(pitch),
     last_x(0), last_y(0),
     is_forward(false),

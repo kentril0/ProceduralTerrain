@@ -15,7 +15,7 @@ public:
            const glm::vec3& pos = glm::vec3(0.0f, 5.0f, 0.0f), 
            const glm::vec3& up = glm::vec3(0.0f, 1.0f, 0.0f),
            const glm::vec3& front = glm::vec3(0.0f, 0.0f, -1.0f),
-           float yaw = DEFAULT_YAW, float pitch = DEFAULT_PITCH);
+           float yaw = DEFAULT_YAW, float pitch = DEFAULT__PITCH);
 
     const glm::vec3& get_position() const { return position; }
 
@@ -28,7 +28,7 @@ public:
 
     glm::mat4 get_proj_matrix() const
     {
-        return glm::perspective(fov, aspect_ratio, near, far);
+        return glm::perspective(fov, aspect_ratio, near_plane, far_plane);
     }
 
     // ------------------------------------------------------------------------
@@ -58,21 +58,21 @@ public:
      * @brief Sets the properties of projection matrix.
      * @param aspect_ratio Screen aspect ratio.
      * @param fov Field of view, in degrees.
-     * @param near Distance to near plane.
-     * @param far Distance to far plane.
+     * @param near_plane Distance to near_plane plane.
+     * @param far_plane Distance to far_plane plane.
      */
-    void set_proj_mat_props(float aspect_ratio, float fov, float near, float far)
+    void set_proj_mat_props(float aspect_ratio, float fov, float near_plane, float far_plane)
     {
         this->aspect_ratio = aspect_ratio;
         this->fov = glm::radians(fov);
-        this->near = near;
-        this->far = far;
+        this->near_plane = near_plane;
+        this->far_plane = far_plane;
     }
 
     void set_aspect_ratio(float as) { this->aspect_ratio = as; }
     void set_field_of_view(float fov) { this->fov = glm::radians(fov); }
-    void set_near_dist(float dist) { this->near = dist; }
-    void set_far_dist(float dist) { this->far = dist; }
+    void set_near_plane_dist(float dist) { this->near_plane = dist; }
+    void set_far_plane_dist(float dist) { this->far_plane = dist; }
 
 
 private:
@@ -84,7 +84,7 @@ private:
     glm::vec3 right;            ///< Right vector of the camera
     glm::vec3 up;               ///< Up vector of the camera
 
-    float aspect_ratio, fov, near, far;     ///< Properties of projection matrix
+    float aspect_ratio, fov, near_plane, far_plane;     ///< Properties of projection matrix
 
     // Looking in which direction in xz plane 
     //  0 degrees - looking in   -z direction
@@ -107,12 +107,12 @@ private:
     // Constants - Defaults, maximums, etc.
     // ------------------------------------------------------------------------
     static const float DEFAULT_YAW;
-    static const float DEFAULT_PITCH;
+    static const float DEFAULT__PITCH;
     static const float DEFAULT_SPEED;
     static const float DEFAULT_ZOOM;
     static const float DEFAULT_FOV;
-    static const float DEFAULT_NEAR;
-    static const float DEFAULT_FAR;
+    static const float DEFAULT_NEAR_PLANE;
+    static const float DEFAULT_FAR_PLANE;
 
     static const float MOUSE_SENSITIVITY;
     static const float ZOOM_SENSITIVITY;
