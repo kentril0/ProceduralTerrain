@@ -1,13 +1,18 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include "scene/skybox.hpp"
 #include "scene/camera.hpp"
 #include "scene/terrain.hpp"
 
 
 /**
- * @brief TODO
+ * @brief Main application that gets rendered in the setup window
  */
 class Application
 {
@@ -32,6 +37,8 @@ private:
     void render();
 
     void update();
+
+    void set_vsync(bool enabled);
 
 private:
     //static GLFWwindow* window_obj;

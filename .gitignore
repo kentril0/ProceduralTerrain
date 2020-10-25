@@ -1,3 +1,4 @@
+
 # Prerequisites
 *.d
 
@@ -30,3 +31,13 @@
 *.exe
 *.out
 *.app
+
+# Custom directories
+build
+texts
+.vscode
+
+# Custom files
+*.swp
+*.odt
+.~*

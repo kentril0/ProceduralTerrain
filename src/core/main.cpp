@@ -61,6 +61,21 @@ int main(void)
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(opengl_debug_callback, nullptr);
 
+    //-------------------------------------------------------------------------
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
+
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(GLSL_VERSION_STR);
+    //-------------------------------------------------------------------------
+
     {
         // Initialize our Application
         Application application(window, initial_width, initial_height);
@@ -86,7 +101,15 @@ int main(void)
         }
     }   // Application is freed here, before GLFW
 
+    //-------------------------------------------------------------------------
+    // ImGUI cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();    
+    //-------------------------------------------------------------------------
+    
     // Free every allocated resource associated with GLFW
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;

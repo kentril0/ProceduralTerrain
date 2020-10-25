@@ -37,6 +37,7 @@
 // TODO OpenGL version
 #define OPENGL_VERSION_MAJOR 4
 #define OPENGL_VERSION_MINOR 5
+#define GLSL_VERSION_STR "#version 450"
 
 // TODO initial screen dimensions
 #define SCREEN_INIT_WIDTH  1280

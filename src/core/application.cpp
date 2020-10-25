@@ -49,6 +49,8 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     // --------------------------------------------------------------------------
     glEnable(GL_DEPTH_TEST);
 
+    set_vsync(false);
+
 }
 
 Application::~Application()
@@ -80,6 +82,7 @@ void Application::loop()
         framestamp += 1.0f;
         frames = 0;
     }
+ 
 
     update();
 
@@ -89,13 +92,21 @@ void Application::loop()
 void Application::render()
 {
     // --------------------------------------------------------------------------
-    // Draw the scene
+    // Clear and reset
     // --------------------------------------------------------------------------
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     glViewport(0, 0, this->width, this->height);
 
+    // --------------------------------------------------------------------------
+    // Sart the Dear ImGUI frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    
+    // --------------------------------------------------------------------------
+    // Draw the scene
+    // --------------------------------------------------------------------------
     // Get projection and view matrices defined by camera
     glm::mat4 proj = camera->get_proj_matrix();
     glm::mat4 view = camera->get_view_matrix();
@@ -109,6 +120,22 @@ void Application::render()
 
     // Render skybox as last
     skybox->render(view, proj);
+
+    
+    // --------------------------------------------------------------------------
+    // ImGUI render
+    // --------------------------------------------------------------------------
+    {
+        bool shown = false;
+        ImGui::Begin("Another Window", &shown);
+        ImGui::Text("Hello from another window!");
+        if (ImGui::Button("Close Me"))
+            shown = false;
+        ImGui::End();
+    }
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    // --------------------------------------------------------------------------
 
     frames++;
 }
@@ -144,8 +171,6 @@ void Application::on_key_pressed(GLFWwindow *window, int key, int scancode, int 
     camera->on_key_pressed(deltaTime, key, scancode, action, mods);
 }
 
-/**
- TODO
 void Application::set_vsync(bool enabled)
 {
     if (enabled)
@@ -153,5 +178,4 @@ void Application::set_vsync(bool enabled)
     else
         glfwSwapInterval(0);
 }
-*/
 
