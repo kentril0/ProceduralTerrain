@@ -2,7 +2,7 @@
 Procedural Terrain Generation using OpenGL and C++
 
 ## Current state:
-<img src="images/version_0_1.png" width="640" height="360">
+<img src="images/version_0_2.png" width="640" height="360">
 
 Controllable FPS camera suspended above a generated mesh with predefined dimensions. No texturing yet.
 

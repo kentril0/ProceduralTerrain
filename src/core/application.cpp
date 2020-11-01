@@ -241,6 +241,8 @@ void Application::show_interface()
             ImGui::SliderFloat("Field of view", &fov, 0.f, 180.f);  // degree fromatting
             ImGui::SliderFloat("Near plane", &near, 0.f, 1000.f);
             ImGui::SliderFloat("Far plane", &far, 1.f, 5000.f);
+
+            // TODO camera preset positions
         }
         
         if (ImGui::CollapsingHeader("Terrain controls"))
