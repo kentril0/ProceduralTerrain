@@ -17,6 +17,8 @@ public:
            const glm::vec3& front = glm::vec3(0.0f, 0.0f, -1.0f),
            float yaw = DEFAULT_YAW, float pitch = DEFAULT__PITCH);
 
+    void update(float deltaTime);
+
     const glm::vec3& get_position() const { return position; }
 
     // TODO make it proj view mat!
@@ -44,15 +46,15 @@ public:
 
     void on_mouse_button(int button, int action, int mods);
 
-    void on_key_pressed(float deltaTime, int key, int scancode, int action, int mods);
+    void on_key_pressed(int key, int action);
 
-    void update(float deltaTime);
+    // TODO assumes GLFW_PRESS = 1, GLFW_RELEASE = 0
+    void key_forward(int action)  { is_forward = action; }
+    void key_backward(int action) { is_backward = action; }
+    void key_right(int action)    { is_right = action; }
+    void key_left(int action)     { is_left = action; }
 
-    // TODO UNUSED
-    void move_forward(float dt)  { position += front * (MOVE_SPEED * dt); }
-    void move_backward(float dt) { position -= front * (MOVE_SPEED * dt); }
-    void move_right(float dt)    { position += right * (MOVE_SPEED * dt); }
-    void move_left(float dt)     { position -= right * (MOVE_SPEED * dt); }
+    void key_reset(int action)    { first_cursor = true; }
 
     /**
      * @brief Sets the properties of projection matrix.
@@ -92,16 +94,16 @@ private:
     //  180 degrees - looking in +z direction
     //  270 degrees - looking in +x direction
     float yaw;
-    
-    // 
+
     // positive ... looking from above the xz plane
     // negative ... looking from below the xz plane
     float pitch;
     
-
     int last_x, last_y;     ///< Last position of cursor on the screen
+    bool first_cursor;      ///< First time the cursor is registered
 
-    bool is_forward, is_backward, is_right, is_left;    ///< Update of movement states
+    // Active movement states of the camera 
+    bool is_forward, is_backward, is_right, is_left;
 
     // ------------------------------------------------------------------------
     // Constants - Defaults, maximums, etc.

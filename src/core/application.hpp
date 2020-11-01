@@ -11,6 +11,18 @@
 #include "scene/terrain.hpp"
 
 
+/**@brief Controls used in application */
+enum Controls
+{
+    KEY_TOGGLE_MENU  = GLFW_KEY_ESCAPE,
+    KEY_CAM_FORWARD  = GLFW_KEY_W,
+    KEY_CAM_BACKWARD = GLFW_KEY_S,
+    KEY_CAM_RIGHT    = GLFW_KEY_D,
+    KEY_CAM_LEFT     = GLFW_KEY_A,
+    KEY_CAM_RCURSOR  = KEY_TOGGLE_MENU
+};
+
+
 /**
  * @brief Main application that gets rendered in the setup window
  */
@@ -40,14 +52,100 @@ private:
 
     void set_vsync(bool enabled);
 
+    void call_registered(int key, int action)
+    { 
+        const auto& it = callback_map.find({key,action,state});
+        if (it != callback_map.end())
+        {
+            const auto& vec_callbacks = it->second;
+            for (const auto& c : vec_callbacks)
+                (this->*c)();
+        }
+      //(this->*(callback_map[{key,action,state}]))(); 
+    }
+
+    // Functions modifying application state
+    void set_state(int s) { LOG_INFO("New state: " << s); state = s; }
+
+    void set_state_modify();    ///< Shows interface for modifications
+    void set_state_freefly();   ///< Hides interface and enables flying w/ camera
+
+    // ImGui functions
+    void show_interface();
+
+    void status_window();
+
+    // Camera callbacks
+    void camera_key_pressed() { camera->on_key_pressed(key, key_action); }
+    void camera_forward()     { camera->key_forward(key_action); }
+    void camera_backward()    { camera->key_backward(key_action); }
+    void camera_right()       { camera->key_right(key_action); }
+    void camera_left()        { camera->key_left(key_action); }
+    void camera_reset()       { camera->key_reset(key_action); }
+
 private:
-    //static GLFWwindow* window_obj;
+    // ----------------------------------------------------------------------------
+    // Typedefs
+    // ----------------------------------------------------------------------------
+    // TODO callback class??
+    typedef void (Application::*Callback)(void);
+    typedef std::vector<Callback> callbacks;
+
+    /** @brief Used as a key to a map of callbacks, that are called whenever a key
+     *         with action and during a state is pressed. */
+    struct CallbackKey
+    {
+        int key;            ///< The GLFW_KEY_* - a.k.a. key on a keyboard
+        int action;         ///< Usually a GLFW_PRESS or GLFW_RELEASE
+        int state;          ///< The application state
+
+        CallbackKey(int k, int a, int s) : key(k), action(a), state(s) {}
+        bool operator==(const CallbackKey &other) const
+        {
+            return (key == other.key
+                    && action == other.action
+                    && state == other.state);
+        }
+    };
+
+    // Make the CallbackKey type hashable 
+    struct Callback_hash
+    {
+        std::size_t operator()(const CallbackKey& k) const
+        {
+            // Compute individual hash values and combine them 
+            //  using XOR and bit shifting:
+            return ((std::hash<int>()(k.key) 
+                     ^ (std::hash<int>()(k.action) << 1)) >> 1) 
+                     ^ (std::hash<int>()(k.state) << 1);
+        }
+    };
+
+    // ----------------------------------------------------------------------------
+    // Data members 
+    // ----------------------------------------------------------------------------
+    GLFWwindow* window;
+
     size_t width;
     size_t height;
 
     // Timestamps
     double lastFrame, framestamp, deltaTime;
     uint32_t frames;
+
+    // Maps the key, action and state to callback function
+    std::unordered_map<CallbackKey, callbacks, Callback_hash> callback_map;
+
+    int key, key_action;        ///< Keyboard key and action
+
+    enum States     ///< Application states, determines 
+    {
+        STATE_MODIFY,   ///< GUI is shown and allows for modifications
+        STATE_FREEFLY   ///< GUI is hidden, camera is moving freely
+    };
+
+    int state;
+
 
     // ----------------------------------------------------------------------------
     // Scene
@@ -62,5 +160,8 @@ private:
 
     std::unique_ptr<Shader> sh_terrain;
     std::unique_ptr<Terrain> terrain;
+
+
+
 };
 

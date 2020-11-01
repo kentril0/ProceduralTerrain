@@ -33,7 +33,6 @@
 
 #include "log.hpp"
 
-
 // TODO OpenGL version
 #define OPENGL_VERSION_MAJOR 4
 #define OPENGL_VERSION_MINOR 5
@@ -43,5 +42,4 @@
 #define SCREEN_INIT_WIDTH  1280
 #define SCREEN_INIT_HEIGHT 720 
 
-// TODO MORE PARAMS TODO
-//
+

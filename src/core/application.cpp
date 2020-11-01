@@ -5,20 +5,19 @@
 // --------------------------------------------------------------------------
 // Static variables
 // --------------------------------------------------------------------------
-//GLFWwindow* Application::window_obj;
 
 
 // --------------------------------------------------------------------------
 Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_height) 
-  : width(initial_width), 
+  : window(w),
+    width(initial_width), 
     height(initial_height),
-    lastFrame(glfwGetTime()), 
-    framestamp(lastFrame)
+    state(STATE_MODIFY)
 {
     LOG_INFO("Screen Dimensions: " << width << " x " << height);
 
-    // TODO "hide" the cursor for the camera
-    glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // "Show" the cursor
+    glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     // --------------------------------------------------------------------------
     // TODO initialize TODO
@@ -45,12 +44,37 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
       std::make_shared<Texture2D>("images/Snow0163_seamless.jpg", false));
 
     // --------------------------------------------------------------------------
+    // Register callbacks
+    // --------------------------------------------------------------------------
+    callback_map = {
+        // Key,             Action,     State
+        { {KEY_TOGGLE_MENU, GLFW_PRESS, STATE_MODIFY}, {&Application::set_state_freefly} },
+        { {KEY_TOGGLE_MENU, GLFW_PRESS, STATE_FREEFLY}, {&Application::set_state_modify, 
+                                                         &Application::camera_reset} },
+        // Camera
+        { {KEY_CAM_FORWARD, GLFW_PRESS, STATE_FREEFLY}, {&Application::camera_forward} },
+        { {KEY_CAM_FORWARD, GLFW_RELEASE, STATE_FREEFLY}, {&Application::camera_forward} },
+        { {KEY_CAM_BACKWARD,GLFW_PRESS, STATE_FREEFLY}, {&Application::camera_backward} },
+        { {KEY_CAM_BACKWARD,GLFW_RELEASE, STATE_FREEFLY}, {&Application::camera_backward} },
+        { {KEY_CAM_RIGHT,   GLFW_PRESS, STATE_FREEFLY}, {&Application::camera_right} },
+        { {KEY_CAM_RIGHT,   GLFW_RELEASE, STATE_FREEFLY}, {&Application::camera_right} },
+        { {KEY_CAM_LEFT,    GLFW_PRESS, STATE_FREEFLY}, {&Application::camera_left} },
+        { {KEY_CAM_LEFT,    GLFW_RELEASE, STATE_FREEFLY}, {&Application::camera_left} }
+    };
+
+    // --------------------------------------------------------------------------
     // Setup OpenGL states
     // --------------------------------------------------------------------------
     glEnable(GL_DEPTH_TEST);
 
     set_vsync(false);
 
+
+    // --------------------------------------------------------------------------
+    // Get current timestamp - prepare for main loop
+    // --------------------------------------------------------------------------
+    lastFrame = glfwGetTime();
+    framestamp = lastFrame;
 }
 
 Application::~Application()
@@ -72,7 +96,7 @@ void Application::loop()
     {
         // TODO
         // Frametime
-        LOG_INFO("Frametime: " << (1.0f / frames) << " ms");
+        LOG_INFO("Frametime: " << (1000.0f / frames) << " ms");
         //fmtcntr->set_text("Ftime: " + std::to_string(1.0f / frames) + " ms");
 
         // FPS
@@ -82,7 +106,6 @@ void Application::loop()
         framestamp += 1.0f;
         frames = 0;
     }
- 
 
     update();
 
@@ -125,13 +148,10 @@ void Application::render()
     // --------------------------------------------------------------------------
     // ImGUI render
     // --------------------------------------------------------------------------
+    
+    // By default GUI is shown
     {
-        bool shown = false;
-        ImGui::Begin("Another Window", &shown);
-        ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me"))
-            shown = false;
-        ImGui::End();
+        show_interface();
     }
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -155,7 +175,8 @@ void Application::on_resize(GLFWwindow *window, int width, int height)
 
 void Application::on_mouse_move(GLFWwindow *window, double x, double y) 
 { 
-    camera->on_mouse_move(x, y);
+    if (state == STATE_FREEFLY)
+        camera->on_mouse_move(x, y);
 }
 
 void Application::on_mouse_pressed(GLFWwindow *window, int button, int action, int mods)
@@ -165,10 +186,95 @@ void Application::on_mouse_pressed(GLFWwindow *window, int button, int action, i
 
 void Application::on_key_pressed(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    this->key = key;
+    key_action = action;
 
-    camera->on_key_pressed(deltaTime, key, scancode, action, mods);
+    call_registered(key, action);
+}
+
+void Application::show_interface()
+{
+    if (state == STATE_MODIFY)
+    {
+        // TODO fix on rescale
+        //ImGui::ShowDemoWindow(NULL);
+        if (!ImGui::Begin("Application controls", NULL))
+        {
+            ImGui::End();
+            return;
+        }
+
+        static bool vsync = false;
+        if (ImGui::Checkbox(" Vertical sync", &vsync))
+            set_vsync(vsync);
+        
+        // application settings
+        //   vsync : checkox
+        //   antialiasing : combobox 2, 4, 8
+        // camera settings
+        //  position vec3   ; input float3
+        //  speed slider    : input float
+        //  zoom            :  input float
+        //  fov             :   input float
+        //  near            : input float
+        //  far             : input float
+        // terrain controls
+        //  dimensions      : input int (?)
+        //  noise functions 
+        // sky effects
+        //  light postion   : input float3
+        //  light color     : color1
+        //  fog color       : color1
+        //  fog falloff     : input float
+        ImGui::End();
+    }
+
+    status_window();
+}
+
+void Application::status_window()
+{
+    // Overlay when flying with camera
+    if (state == STATE_FREEFLY)
+        ImGui::SetNextWindowBgAlpha(0.35f);
+
+    // TODO fix on rescale
+    // Collapsed or Clipped
+    if (!ImGui::Begin("Application Metrics", NULL))
+    {
+        ImGui::End();
+        return;
+    }
+
+        ImGuiIO& io = ImGui::GetIO();
+        // frametime and FPS
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 
+                    1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("%d vertices, %d indices (%d triangles)", 
+                    io.MetricsRenderVertices, io.MetricsRenderIndices, 
+                    io.MetricsRenderIndices / 3);
+        ImGui::Text("%d active allocations", io.MetricsActiveAllocations);
+
+        // TODO terrain score
+        // current camera position
+    
+    ImGui::End();
+}
+
+void Application::set_state_modify()
+{
+    set_state(STATE_MODIFY);
+
+    // Show the cursor
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+void Application::set_state_freefly()
+{
+    set_state(STATE_FREEFLY);
+
+    // Hide the cursor
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void Application::set_vsync(bool enabled)
