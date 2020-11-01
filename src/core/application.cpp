@@ -192,40 +192,153 @@ void Application::on_key_pressed(GLFWwindow *window, int key, int scancode, int 
     call_registered(key, action);
 }
 
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 void Application::show_interface()
 {
     if (state == STATE_MODIFY)
     {
         // TODO fix on rescale
         //ImGui::ShowDemoWindow(NULL);
+
         if (!ImGui::Begin("Application controls", NULL))
         {
             ImGui::End();
             return;
         }
 
-        static bool vsync = false;
-        if (ImGui::Checkbox(" Vertical sync", &vsync))
-            set_vsync(vsync);
+        if (ImGui::CollapsingHeader("Configuration"))
+        {
+            static bool vsync = false;
+            if (ImGui::Checkbox(" Vertical sync", &vsync))
+                set_vsync(vsync);
+            // TODO UI scaling
+        }
+
+        if (ImGui::CollapsingHeader("Camera settings"))
+        {
+            // TODO not working
+            // TODO help (?)
+            static glm::vec3 pos(1.0);
+            static float zoom = 0;
+            static float fov = 45;
+            static float near = 1;
+            static float far = 1000;
+
+            ImGui::InputFloat3("Position", glm::value_ptr(pos));
+            ImGui::SliderFloat("Zoom factor", &zoom, 0.f, 100.f);
+            ImGui::SliderFloat("Field of view", &fov, 0.f, 180.f);  // degree fromatting
+            ImGui::SliderFloat("Near plane", &near, 0.f, 1000.f);
+            ImGui::SliderFloat("Far plane", &far, 1.f, 5000.f);
+        }
         
-        // application settings
-        //   vsync : checkox
-        //   antialiasing : combobox 2, 4, 8
-        // camera settings
-        //  position vec3   ; input float3
-        //  speed slider    : input float
-        //  zoom            :  input float
-        //  fov             :   input float
-        //  near            : input float
-        //  far             : input float
-        // terrain controls
-        //  dimensions      : input int (?)
-        //  noise functions 
-        // sky effects
-        //  light postion   : input float3
-        //  light color     : color1
-        //  fog color       : color1
-        //  fog falloff     : input float
+        if (ImGui::CollapsingHeader("Terrain controls"))
+        {
+            static int dim = 32;
+
+            // Dimensions
+            ImGui::InputInt("Terrain size", &dim);
+            
+            static int use_type = 0;
+            const uint8_t TERR_COLORS = 0;
+            const uint8_t TERR_TEXTURES = 1;
+            ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); ImGui::SameLine();
+            ImGui::RadioButton("Use textures", &use_type, TERR_TEXTURES);
+
+            // Terrain Colors
+            if (use_type == TERR_COLORS)
+            {
+                static glm::vec3 color1(1.0f);
+                static glm::vec3 color2(1.0f);
+                static glm::vec3 color3(1.0f);
+                ImGui::ColorEdit3("Color 1", glm::value_ptr(color1)); ImGui::SameLine(); 
+                HelpMarker("Click on the colored square to open a color picker.\n"
+                           "Click and hold to use drag and drop.\n"
+                           "Right-click on the colored square to show options.\n"
+                           "CTRL+click on individual component to input value.\n");
+                ImGui::ColorEdit3("Color 2", glm::value_ptr(color2));
+                ImGui::ColorEdit3("Color 3", glm::value_ptr(color3));
+            }
+            // Textures
+            else if (use_type == TERR_TEXTURES)
+            {
+                // TODO read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+                // TODO scale icons
+                ImGuiIO& io = ImGui::GetIO();
+                ImGui::TextWrapped("Hello, below are images of textures");
+                ImTextureID my_tex_id = io.Fonts->TexID;
+                float my_tex_w = 96;
+                float my_tex_h = 96;
+
+                for (int i = 0; i < 3; ++i)
+                {
+                  if (i > 0)
+                    ImGui::SameLine();
+
+                  ImGui::BeginGroup();
+                    ImGui::Text("%.0f x %.0f", my_tex_w, my_tex_h);
+                    ImVec2 pos = ImGui::GetCursorScreenPos();
+                    ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+                    ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+                    ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+                    ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+                    ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, 
+                                 uv_max, tint_col, border_col);
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::BeginTooltip();
+                        float region_sz = 32.0f;
+                        float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
+                        float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
+                        float zoom = 4.0f;
+                        if (region_x < 0.0f) { region_x = 0.0f; }
+                        else if (region_x > my_tex_w - region_sz) { 
+                            region_x = my_tex_w - region_sz; }
+                        if (region_y < 0.0f) { region_y = 0.0f; }
+                        else if (region_y > my_tex_h - region_sz) {
+                            region_y = my_tex_h - region_sz; }
+                        ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
+                        ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
+                                                         region_y + region_sz);
+                        ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
+                        ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, 
+                                            (region_y + region_sz) / my_tex_h);
+                        ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, 
+                                                       region_sz * zoom), 
+                                     uv0, uv1, tint_col, border_col);
+                        ImGui::EndTooltip();
+                    }
+                  ImGui::EndGroup();
+                }
+            }
+            // Slope controls
+            
+
+            // TODO noise functions
+        }
+
+        if (ImGui::CollapsingHeader("Sky effects"))
+        {
+            static glm::vec3 light_col(1.0f);
+            static glm::vec3 fog_col(1.0f);
+            static float fog_falloff = 1.0f;
+
+            ImGui::ColorEdit3("Light color", glm::value_ptr(light_col));
+            ImGui::ColorEdit3("Fog color", glm::value_ptr(fog_col));
+            ImGui::SliderFloat("Fog falloff dist", &fog_falloff, 1.f, 1000.f);
+        }
+
         ImGui::End();
     }
 
