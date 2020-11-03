@@ -67,7 +67,7 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     // --------------------------------------------------------------------------
     glEnable(GL_DEPTH_TEST);
 
-    set_vsync(false);
+    set_vsync(true);
 
 
     // --------------------------------------------------------------------------
@@ -220,7 +220,7 @@ void Application::show_interface()
 
         if (ImGui::CollapsingHeader("Configuration"))
         {
-            static bool vsync = false;
+            static bool vsync = true;
             if (ImGui::Checkbox(" Vertical sync", &vsync))
                 set_vsync(vsync);
             // TODO UI scaling
@@ -228,21 +228,34 @@ void Application::show_interface()
 
         if (ImGui::CollapsingHeader("Camera settings"))
         {
-            // TODO not working
             // TODO help (?)
-            static glm::vec3 pos(1.0);
-            static float zoom = 0;
-            static float fov = 45;
-            static float near = 1;
-            static float far = 1000;
+            glm::vec3 pos = camera->get_position();
+            float pitch = camera->get_pitch();
+            float yaw = camera->get_yaw();
+            static float fov = glm::radians(camera->get_field_of_view());
+            static float near = camera->get_near_plane_dist();
+            static float far = camera->get_far_plane_dist();
 
-            ImGui::InputFloat3("Position", glm::value_ptr(pos));
-            ImGui::SliderFloat("Zoom factor", &zoom, 0.f, 100.f);
-            ImGui::SliderFloat("Field of view", &fov, 0.f, 180.f);  // degree fromatting
-            ImGui::SliderFloat("Near plane", &near, 0.f, 1000.f);
-            ImGui::SliderFloat("Far plane", &far, 1.f, 5000.f);
+            if (ImGui::InputFloat3("Position", glm::value_ptr(pos)))
+                camera->set_position(pos);
 
-            // TODO camera preset positions
+            if (ImGui::SliderFloat("Pitch angle", &pitch, -89.f, 89.f, "%.0f deg"))
+                camera->set_pitch(pitch);
+
+            if (ImGui::SliderFloat("Yaw angle", &yaw, 0.f, 360.f, "%.0f deg"))
+                camera->set_yaw(yaw);
+
+            if (ImGui::SliderAngle("Field of view", &fov, 0.f, 180.f))
+                camera->set_field_of_view(fov);
+
+            if (ImGui::SliderFloat("Near plane", &near, 0.f, 10.f))
+                camera->set_near_plane_dist(near);
+
+            if (ImGui::SliderFloat("Far plane", &far, 100.f, 1000.f))
+                camera->set_far_plane_dist(far);
+
+            // TODO camera preset positions relative to terrain size
+            
         }
         
         if (ImGui::CollapsingHeader("Terrain controls"))

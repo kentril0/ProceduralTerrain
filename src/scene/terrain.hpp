@@ -48,6 +48,8 @@ public:
 
     const glm::mat4& get_model() { return model; }
 
+    const glm::uvec2 get_size() { return size; }
+
 private:    
 
     void generate();
