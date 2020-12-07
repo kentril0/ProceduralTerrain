@@ -203,7 +203,6 @@ void Terrain::generate_buffers()
     vao.set_index_buffer(ibo);
 }
 
-
 /**
  * @brief Terrain supports up to 3 texture stages (0-2). Each texture stage
  *        will be blended with next to produce a realistic looking terrain.

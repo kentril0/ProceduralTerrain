@@ -37,6 +37,11 @@ public:
     /** @return Height of the terrain at world position */
     float height_at(const glm::vec3& position);
 
+    // ------------------------------------------------------------------------
+    // Setters
+    // ------------------------------------------------------------------------
+    void set_model(const glm::mat4& m) { model = m; inv_model = glm::inverse(model); }
+
     // TODO unused
     void set_texture(
         unsigned stage = 0
@@ -44,11 +49,20 @@ public:
 
     void debug_render();
 
-    void set_model(const glm::mat4& m) { model = m; inv_model = glm::inverse(model); }
+    void set_size(glm::uvec2 size) { size = size; regenerate(); }
 
+    void set_size(uint32_t x_size, uint32_t z_size)
+    {
+        size = glm::uvec2(x_size, z_size); regenerate();
+    }
+
+    // ------------------------------------------------------------------------
+    // Getters
+    // ------------------------------------------------------------------------
     const glm::mat4& get_model() { return model; }
 
     const glm::uvec2 get_size() { return size; }
+
 
 private:    
 
@@ -59,6 +73,18 @@ private:
     void generate_buffers();
 
     void render_normals();      ///< For debugging purposes
+
+    // TODO better
+    void regenerate()
+    {
+        vao.clear();
+        vertices.clear();
+        normals.clear();
+        tex_coords.clear();
+        colors.clear();
+        indices.clear();
+        generate();
+    }
 
 private:
     glm::uvec2 size;

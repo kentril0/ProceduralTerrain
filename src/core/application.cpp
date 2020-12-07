@@ -263,7 +263,8 @@ void Application::show_interface()
             static int dim = 32;
 
             // Dimensions
-            ImGui::InputInt("Terrain size", &dim);
+            if (ImGui::SliderInt("Terrain size", &dim, 4, 512))
+                terrain->set_size(dim, dim);
             
             static int use_type = 0;
             const uint8_t TERR_COLORS = 0;

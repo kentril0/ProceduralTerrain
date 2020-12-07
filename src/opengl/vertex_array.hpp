@@ -52,9 +52,11 @@ public:
     ~VertexArray();
 
     void bind() const;
+
     void unbind() const;
 
     void add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, bool instanced = false);
+
     void set_index_buffer(const std::shared_ptr<IndexBuffer>& ibo);
 
     const uint32_t ID() { return id; }
@@ -73,6 +75,15 @@ public:
         return index_buffer;
     }
 
+    /** @brief Frees all the assigned vertex buffers */
+    void clear_buffers() { vertex_buffers.clear(); binding_index = 0; }
+
+    /** @brief Frees the assigned index buffer */
+    void clear_index() { index_buffer.reset(); }
+
+    /** @brief Frees both the assigned vertex bufferss and the index buffer */
+    void clear() { clear_buffers(); clear_index(); }
+
 private:
     uint32_t id;
     uint32_t binding_index = 0;
@@ -80,3 +91,4 @@ private:
     std::vector<std::shared_ptr<VertexBuffer>> vertex_buffers;
     std::shared_ptr<IndexBuffer> index_buffer;
 };
+
