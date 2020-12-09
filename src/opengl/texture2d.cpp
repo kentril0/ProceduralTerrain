@@ -3,21 +3,21 @@
 
 
 Texture2D::Texture2D(bool mps)
-    : width(0), 
-      height(0), 
-      internal_format(GL_RGBA8),
-      image_format(GL_RGBA),
-      mipmaps(mps)
+    : m_width(0), 
+      m_height(0), 
+      m_internal_format(GL_RGBA8),
+      m_image_format(GL_RGBA),
+      m_mipmaps(mps)
 {
     glCreateTextures(GL_TEXTURE_2D, 1, &id);
 }
 
 Texture2D::Texture2D(const std::string& filename, bool alpha, bool mps)
-    : width(0), 
-      height(0), 
-      internal_format(GL_RGBA8),
-      image_format(alpha ? GL_RGBA : GL_RGB),
-      mipmaps(mps)
+    : m_width(0), 
+      m_height(0), 
+      m_internal_format(GL_RGBA8),
+      m_image_format(alpha ? GL_RGBA : GL_RGB),
+      m_mipmaps(mps)
 {
     DERR("Texture def CONSTR");
     glCreateTextures(GL_TEXTURE_2D, 1, &id);
@@ -37,26 +37,56 @@ void Texture2D::load(const std::string& filename, bool alpha)
     unsigned char *data = load_image(filename.c_str(), alpha, &w, &h, &channels);
 
     // Save image dimensions
-    width = w;
-    height = h;
+    m_width = w;
+    m_height = h;
 
-    // Create texture with log2 of width levels
+    // Specify storage for all levels of a 2D array texture
+    //  Create texture with log2 of width levels
     glTextureStorage2D(id,
-                       (mipmaps ? std::log2(width) : 1),
-                       internal_format,
-                       width, height);
+                       (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
+                       m_internal_format,           // sized format of stored data *RGBA8
+                       m_width, m_height);          // in texels
 
-    glTextureSubImage2D(id,
-                        0,                         //
-                        0, 0,                      //
-                        width, height,             //
-                        image_format, GL_UNSIGNED_BYTE, //
-                        data);
+    // Specify a 2D texture subimage
+    glTextureSubImage2D(id,                 // texture id
+                        0,                  // level
+                        0, 0,               // xoffset, yoffset in the texture array
+                        m_width, m_height,  // width, height of the subimage
+                        m_image_format,     // format of the pixel data *RED, RGB, RGBA
+                        GL_UNSIGNED_BYTE,   // data type of the pixel data, *BYTE, FLOAT, INT
+                        data);              // A pointer to the image data in memory
 
     free_image_data(data);
 
     // Generate Mipmaps
-    if (mipmaps)
+    if (m_mipmaps)
+    	gen_mipmap();
+}
+
+void Texture2D::upload(const uint8_t* data, int w, int h)
+{
+    // Save the dimensions
+    m_width = w;
+    m_height = h;
+
+    // Specify storage for all levels of a 2D array texture
+    //  Create texture with log2 of width levels
+    glTextureStorage2D(id,
+                       (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
+                       m_internal_format,           // sized format of stored data *RGBA8
+                       m_width, m_height);          // in texels
+
+    // Specify a 2D texture subimage
+    glTextureSubImage2D(id,                 // texture id
+                        0,                  // level
+                        0, 0,               // xoffset, yoffset in the texture array
+                        m_width, m_height,  // width, height of the subimage
+                        m_image_format,     // format of the pixel data *RED, RGB, RGBA
+                        GL_UNSIGNED_BYTE,   // data type of the pixel data, *BYTE, FLOAT, INT
+                        data);              // A pointer to the image data in memory
+
+    // Generate Mipmaps
+    if (m_mipmaps)
     	gen_mipmap();
 }
 
@@ -109,6 +139,19 @@ void Texture2D::gen_mipmap()
 
     glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+void Texture2D::set_filtering(uint32_t min_f, uint32_t mag_f)
+{
+    glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, min_f);
+    glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, mag_f);
+}
+
+void Texture2D::set_linear_filtering()
+{
+    // Returns the weighted average of the four texture elements that are closest 
+    //  to the specified texture coordinate
+    set_filtering(GL_LINEAR, GL_LINEAR);
 }
 
 void Texture2D::activate(uint32_t unit) const

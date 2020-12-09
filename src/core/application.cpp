@@ -342,6 +342,9 @@ void Application::show_interface()
             
 
             // TODO noise functions
+            //  Each texture has a range, 2 - 512
+            //      if last res != res: update
+            //
         }
 
         if (ImGui::CollapsingHeader("Sky effects"))
