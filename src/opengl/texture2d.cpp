@@ -90,6 +90,38 @@ void Texture2D::upload(const uint8_t* data, int w, int h)
     	gen_mipmap();
 }
 
+void Texture2D::upload(const float* data, int w, int h)
+{
+    // Generate Mipmaps
+    if (m_mipmaps)
+    	gen_mipmap();
+
+    // Save the dimensions
+    m_width = w;
+    m_height = h;
+
+    DERR("here1 " << m_width << " " << m_height);
+    // Specify storage for all levels of a 2D array texture
+    //  Create texture with log2 of width levels
+    glTextureStorage2D(id,
+                       (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
+                       m_internal_format,           // sized format of stored data *RGBA8
+                       m_width, m_height);          // in texels
+
+    DERR("here");
+    // Specify a 2D texture subimage
+    glTextureSubImage2D(id,                 // texture id
+                        0,                  // level
+                        0, 0,               // xoffset, yoffset in the texture array
+                        m_width, m_height,  // width, height of the subimage
+                        m_image_format,     // format of the pixel data *RED, RGB, RGBA
+                        GL_FLOAT,           // data type of the pixel data, *BYTE, FLOAT, INT
+                        data);              // A pointer to the image data in memory
+
+    DERR("here2");
+
+}
+
 void Texture2D::bind() const
 {
     glBindTexture(GL_TEXTURE_2D, id);

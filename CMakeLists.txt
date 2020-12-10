@@ -159,6 +159,8 @@ set(sources
     "${SRC_OPENGL_DIR}/shader.cpp"
     "${SRC_OPENGL_DIR}/texture2d.cpp"
     "${SRC_OPENGL_DIR}/vertex_array.cpp"
+    "${SRC_OPENGL_DIR}/noise.cpp"
+    "${SRC_OPENGL_DIR}/proc_texture2d.cpp"
     "${SRC_SCENE_DIR}/camera.cpp"
     "${SRC_SCENE_DIR}/skybox.cpp"
     "${SRC_SCENE_DIR}/terrain.cpp"

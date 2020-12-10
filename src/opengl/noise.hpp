@@ -11,6 +11,13 @@ class Noise
 public:
     typedef float value_t;
 
+    enum Type
+    {
+        Random,
+        Perlin2D,
+        OctavesPerlin2D
+    };
+
     static void reseed(uint32_t seed)
     {
         m_gen.seed(seed);
@@ -18,15 +25,15 @@ public:
     }
 
     /** @return Pseudorandom value from uniform distribution, in <0.0, 1.0> */
-    static value_t random() const { return m_distrib(m_gen); }
+    static value_t random() { return m_distrib(m_gen); }
 
     /** 
      * @brief 3D Perlin noise
      * @return Noise value in <0.0, 1.0>
      */
-    static value_t perlin(value_t x, value_t y, value_t z) const;
+    static value_t perlin(value_t x, value_t y, value_t z);
 
-    static value_t perlin2D(value_t x, value_t y) const { return perlin(x, y, 0); }
+    static value_t perlin2D(value_t x, value_t y) { return perlin(x, y, 0); }
 
     /**
      * @brief Sample perlin noise with various properties and sum it together
@@ -35,17 +42,32 @@ public:
      *          amplitutde = persistence ^ i
      * @return Summed noise value in <0.0, 1.0>
      */
-    static value_t octave_perlin(value_t x, value_t y, value_t z, 
-                                 uint32_t octaves, value_t persistence) const;
+    static value_t octavesPerlin(value_t x, value_t y, value_t z);
+
+    static value_t octavesPerlin2D(value_t x, value_t y);
+
+    static void setOctaves(uint32_t octaves) { m_octaves = octaves; }
+
+    static void setPersistence(float persistence)
+    {
+        glm::clamp(persistence, 0.0001f, 1.0f);
+        m_persistence = persistence;
+    }
 
 private:
     Noise();
+
+    //@brief Linear interpolation
+    static constexpr value_t lerp(value_t a, value_t b, value_t t) noexcept
+    {
+        return a + t * (b - a);
+    }
 
     /** 
      * @brief Fade function defined by Ken Perlin, smoothes the output
      *        6t^5 - 15t^4 + 10t^3
      */
-    static value_t fade(value_t t) const
+    static constexpr value_t fade(value_t t) noexcept
     {
         return t * t * t * (t * (t * 6 - 15) + 10);
     }
@@ -57,7 +79,7 @@ private:
      * @return Picks a random vector from the 12 selected vectors and computes
      *         a dot product
      */
-    static value_t grad(int hash, value_t x, value_t y, value_t z) const
+    static constexpr value_t grad(int hash, value_t x, value_t y, value_t z) noexcept
     {
         switch(hash & 0xF)
         {
@@ -93,4 +115,8 @@ private:
 
     static int32_t p[PERM_SIZE];                ///< Permutation table
 
+    // Accumulated Perlin noise global values
+    static uint32_t m_octaves;
+    static float  m_persistence;
 };
+

@@ -36,6 +36,8 @@ public:
  	 */
 	void upload(const uint8_t* data, int width, int height);
 
+    void upload(const float* data, int width, int height);
+
 	/**
  	 * @brief Bind the texture object
 	 */
@@ -82,7 +84,7 @@ public:
 	// Getters
 	uint32_t ID() const { return id; }
 
-	glm::uvec2 size() const { return glm::uvec2(width, height); }
+	glm::uvec2 size() const { return glm::uvec2(m_width, m_height); }
 
 private:
 	uint32_t id;

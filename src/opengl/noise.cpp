@@ -1,5 +1,6 @@
+#include "core/pch.hpp"
 #include "noise.hpp"
-#include <cmath>
+
 
 uint32_t Noise::m_seed = std::default_random_engine::default_seed;
 
@@ -7,6 +8,9 @@ std::default_random_engine Noise::m_gen(m_seed);
 std::uniform_real_distribution<Noise::value_t> Noise::m_distrib(0.0, 1.0);
 
 int32_t Noise::p[PERM_SIZE];
+
+uint32_t Noise::m_octaves = 1;
+float  Noise::m_persistence = 0.5;
 
 
 Noise::Noise()
@@ -41,13 +45,13 @@ Noise::Noise()
  * @date 09 August 2014
  * @url https://adrianb.io/2014/08/09/perlinnoise.html
  */
-value_t Noise::perlin(value_t x, value_t y, value_t z) const
+Noise::value_t Noise::perlin(Noise::value_t x, Noise::value_t y, Noise::value_t z)
 {
     // Get the coordinates of the unit cube, in range
     //  Perlin noise always repeats every 256 coordinates
-    const int32_t xi = static_cast<int32_t>(std::floor(x)) & RANGE-1;
-    const int32_t yi = static_cast<int32_t>(std::floor(y)) & RANGE-1;
-    const int32_t zi = static_cast<int32_t>(std::floor(z)) & RANGE-1;
+    const int32_t xi = static_cast<int32_t>(std::floor(x)) & (RANGE-1);
+    const int32_t yi = static_cast<int32_t>(std::floor(y)) & (RANGE-1);
+    const int32_t zi = static_cast<int32_t>(std::floor(z)) & (RANGE-1);
 
     // Location in the unit cube - fractions
     x -= std::floor(x);
@@ -55,9 +59,9 @@ value_t Noise::perlin(value_t x, value_t y, value_t z) const
     z -= std::floor(z);
 
     // Fade the locations to smoothen the results
-    const value_t u = fade(x);
-    const value_t v = fade(y);
-    const value_t w = fade(z);
+    const Noise::value_t u = fade(x);
+    const Noise::value_t v = fade(y);
+    const Noise::value_t w = fade(z);
 
     // Get unique value for every coordinate using hash function
     //  hashes all 8 unit cube coordinates
@@ -79,43 +83,43 @@ value_t Noise::perlin(value_t x, value_t y, value_t z) const
     //const int32_t BB = p[B + 1] + zi;
 
     // Weighted average based on the faded (u,v,w)
-    value_t x1, x2, y1, y2;
+    Noise::value_t x1, x2, y1, y2;
 
-    x1 = std::lerp(grad(aaa, x  , y  , z),
-                   grad(baa, x-1, y  , z),
-                   u);
-    x2 = std::lerp(grad(aba, x  , y-1, z),
-                   grad(bba, x-1, y-1, z),
-                   u);
-    y1 = std::lerp(x1, x2, v);
+    x1 = lerp(grad(aaa, x  , y  , z),
+              grad(baa, x-1, y  , z),
+              u);
+    x2 = lerp(grad(aba, x  , y-1, z),
+              grad(bba, x-1, y-1, z),
+              u);
+    y1 = lerp(x1, x2, v);
 
-    x1 = std::lerp(grad(aab, x  , y  , z-1),
-                   grad(bab, x-1, y  , z-1),
-                   u);
-    x2 = std::lerp(grad(abb, x  , y-1, z-1),
-                   grad(bbb, x-1, y-1, z-1),
-                   u);
-    y2 = std::lerp(x1, x2, v);
+    x1 = lerp(grad(aab, x  , y  , z-1),
+              grad(bab, x-1, y  , z-1),
+              u);
+    x2 = lerp(grad(abb, x  , y-1, z-1),
+              grad(bbb, x-1, y-1, z-1),
+              u);
+    y2 = lerp(x1, x2, v);
 
     // For convenience, bind the result to 0 - 1 (theoretical min/max before is [-1, 1])
-    return (std::lerp(y1, y2, w) +1) / 2;
+    return (lerp(y1, y2, w) +1) / 2;
 } 
 
-value_t octave_perlin(value_t x, value_t y, value_t z,
-                      uint32_t octaves, value_t persistence)
+Noise::value_t Noise::octavesPerlin(Noise::value_t x, Noise::value_t y, 
+                                    Noise::value_t z)
 {
-    value_t total = 0;
-    value_t frequency = 1;
-    value_t amplitude = 1;
-    value_t max_value = 0; 
+    Noise::value_t total = 0;
+    Noise::value_t frequency = 1;
+    Noise::value_t amplitude = 1;
+    Noise::value_t max_value = 0; 
 
-    for(uint32_t i = 0; i < octaves; ++i)
+    for(uint32_t i = 0; i < m_octaves; ++i)
     {
         total += perlin(x * frequency, y * frequency, z * frequency) * amplitude;
         
         max_value += amplitude;
         
-        amplitude *= persistence;
+        amplitude *= m_persistence;
         frequency *= 2;
     }
     
@@ -123,4 +127,24 @@ value_t octave_perlin(value_t x, value_t y, value_t z,
     return total / max_value;
 }
 
+Noise::value_t Noise::octavesPerlin2D(Noise::value_t x, Noise::value_t y)
+{
+    Noise::value_t total = 0;
+    Noise::value_t frequency = 1;
+    Noise::value_t amplitude = 1;
+    Noise::value_t max_value = 0; 
+
+    for(uint32_t i = 0; i < m_octaves; ++i)
+    {
+        total += perlin2D(x * frequency, y * frequency) * amplitude;
+        
+        max_value += amplitude;
+        
+        amplitude *= m_persistence;
+        frequency *= 2;
+    }
+    
+    // Normalize to <0.0, 1.0>
+    return total / max_value;
+}
 

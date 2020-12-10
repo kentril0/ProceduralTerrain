@@ -2,10 +2,10 @@
 #include "proc_texture2d.hpp"
 
 
-ProceduralTex2D::ProceduralTex2D(uint32_t res, const function<float()>& fnc)
+ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
   : m_resolution(res), 
-    m_texture(true),
-    noise_fnc(fnc)
+    m_noiseType(t),
+    m_texture(true)
 {
     // Internal format variants
     //  GL_R8, base format: GL_RED
@@ -17,23 +17,84 @@ ProceduralTex2D::ProceduralTex2D(uint32_t res, const function<float()>& fnc)
     //  GL_R32F, GL_RED
     //  GL_RGB32F, GL_RGB
 
-    // Default: GL_RGBA8, base: GL_RGBA
-    data = new uint8_t[res];
+    // Default: GL_RGB8, base: GL_RGB
+    // TODO
 
-    m_texture.set_image_format(GL_RED)
-    m_texture.set_internal_format(GL_R8);
+    m_texture.set_internal_format(GL_RGB8);
+    m_texture.set_image_format(GL_RGB);
+    m_pixelSize = 3;
     m_texture.set_clamp_to_edge();
+
+    fill();
 }
 
 void ProceduralTex2D::fill()
 {
-    for (uint32_t y = 0; y < m_resolution; ++y)
+    m_noiseMap.resize(m_resolution * m_resolution);
+
+    switch (m_noiseType)
     {
-        for (uint32_t x = 0; x < m_resolution; ++x)
-        {
-            m_data[(y * m_resolution) + x] = noise_fnc();
-        }
+        case Noise::Random:
+            fillRandom();
+            break;
+        case Noise::Perlin2D:
+            fillPerlin2D();
+            break;
+        case Noise::OctavesPerlin2D:
+            fillOctavesPerlin2D();
+            break;
     }
 
-    m_texture.upload(m_data, m_resolution, m_resolution);
+    applyTexture();
 }
+
+void ProceduralTex2D::fillRandom()
+{
+    for (uint32_t y = 0; y < m_resolution; ++y)
+        for (uint32_t x = 0; x < m_resolution; ++x)
+            m_noiseMap[(y * m_resolution) + x] = Noise::random();
+}
+
+void ProceduralTex2D::fillPerlin2D()
+{
+    for (uint32_t y = 0; y < m_resolution; ++y)
+        for (uint32_t x = 0; x < m_resolution; ++x)
+            m_noiseMap[(y * m_resolution) + x] = Noise::perlin2D(x, y);
+}
+
+void ProceduralTex2D::fillOctavesPerlin2D()
+{
+    for (uint32_t y = 0; y < m_resolution; ++y)
+        for (uint32_t x = 0; x < m_resolution; ++x)
+            m_noiseMap[(y * m_resolution) + x] = Noise::octavesPerlin2D(x, y);
+}
+
+void ProceduralTex2D::applyTexture()
+{
+    m_colorMap.resize(m_resolution * m_resolution * m_pixelSize);
+
+    for (uint32_t y = 0; y < m_resolution; ++y)
+        for (uint32_t x = 0; x < m_resolution; ++x)
+        {
+            uint32_t index = (y * m_resolution) + x;
+            Noise::value_t v = m_noiseMap[index];
+
+            m_colorMap[index*m_pixelSize + 0] = v;
+            m_colorMap[index*m_pixelSize + 1] = v;
+            m_colorMap[index*m_pixelSize + 2] = v;
+        } 
+
+    m_texture.upload(&m_colorMap[0], m_resolution, m_resolution);
+}
+
+void ProceduralTex2D::setSize(uint32_t res)
+{ 
+    uint32_t old_res = m_resolution;
+    m_resolution = res;
+
+    if (res > old_res)
+        fill();
+    else if (res < old_res)
+        applyTexture();
+}
+

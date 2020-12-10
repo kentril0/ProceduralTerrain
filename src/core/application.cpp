@@ -38,10 +38,12 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
 
     sh_terrain = std::make_unique<Shader>("shaders/draw_terrain.vs",
                                           "shaders/draw_terrain.fs");
-    terrain = std::make_unique<Terrain>(32, 32,
-      std::make_shared<Texture2D>("images/farmland.jpg", false),
-      std::make_shared<Texture2D>("images/Grass0130_seamless.jpg", false),
-      std::make_shared<Texture2D>("images/Snow0163_seamless.jpg", false));
+    // TODO local
+    terrain = std::make_unique<Terrain>(32, 32);
+      // TODO
+      //std::make_shared<Texture2D>("images/farmland.jpg", false),
+      //std::make_shared<Texture2D>("images/Grass0130_seamless.jpg", false),
+      //std::make_shared<Texture2D>("images/Snow0163_seamless.jpg", false));
 
     // --------------------------------------------------------------------------
     // Register callbacks
@@ -136,7 +138,7 @@ void Application::render()
 
     // Render the terrain
     sh_terrain->use();
-    sh_terrain->set_mat4("model", terrain->get_model());
+    sh_terrain->set_mat4("model", terrain->model());
     sh_terrain->set_mat4("view", view);
     sh_terrain->set_mat4("proj", proj);
     terrain->render();
@@ -152,9 +154,10 @@ void Application::render()
     // By default GUI is shown
     {
         show_interface();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     // --------------------------------------------------------------------------
 
     frames++;
@@ -264,7 +267,7 @@ void Application::show_interface()
 
             // Dimensions
             if (ImGui::SliderInt("Terrain size", &dim, 4, 512))
-                terrain->set_size(dim, dim);
+                terrain->setSize(dim, dim);
             
             static int use_type = 0;
             const uint8_t TERR_COLORS = 0;
@@ -293,7 +296,17 @@ void Application::show_interface()
                 // TODO scale icons
                 ImGuiIO& io = ImGui::GetIO();
                 ImGui::TextWrapped("Hello, below are images of textures");
-                ImTextureID my_tex_id = io.Fonts->TexID;
+                //ImTextureID my_tex_id = io.Fonts->TexID;
+                //float my_tex_w = 96;
+                //float my_tex_h = 96;
+                
+                //ImTextureID my_tex_id = &((void)(terrain->heightMap().ID()));
+                uint32_t tex_id = terrain->heightMap().ID();
+                glm::uvec2 tex_size = terrain->heightMap().size();
+
+                //glBindTexture(GL_TEXTURE_2D, my_tex_id);
+                ImTextureID my_tex_id = (void*)(intptr_t)tex_id;
+                
                 float my_tex_w = 96;
                 float my_tex_h = 96;
 
@@ -303,7 +316,7 @@ void Application::show_interface()
                     ImGui::SameLine();
 
                   ImGui::BeginGroup();
-                    ImGui::Text("%.0f x %.0f", my_tex_w, my_tex_h);
+                    ImGui::Text("%u x %u", tex_size.x, tex_size.y);
                     ImVec2 pos = ImGui::GetCursorScreenPos();
                     ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
                     ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
