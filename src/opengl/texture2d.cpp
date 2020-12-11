@@ -40,7 +40,7 @@ void Texture2D::load(const std::string& filename, bool alpha)
     m_width = w;
     m_height = h;
 
-    // Specify storage for all levels of a 2D array texture
+    // Specify IMMUTABLE storage for all levels of a 2D array texture
     //  Create texture with log2 of width levels
     glTextureStorage2D(id,
                        (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
@@ -69,62 +69,56 @@ void Texture2D::upload(const uint8_t* data, int w, int h)
     m_width = w;
     m_height = h;
 
+    bind();
     // Specify storage for all levels of a 2D array texture
-    //  Create texture with log2 of width levels
-    glTextureStorage2D(id,
-                       (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
-                       m_internal_format,           // sized format of stored data *RGBA8
-                       m_width, m_height);          // in texels
-
-    // Specify a 2D texture subimage
-    glTextureSubImage2D(id,                 // texture id
-                        0,                  // level
-                        0, 0,               // xoffset, yoffset in the texture array
-                        m_width, m_height,  // width, height of the subimage
-                        m_image_format,     // format of the pixel data *RED, RGB, RGBA
-                        GL_UNSIGNED_BYTE,   // data type of the pixel data, *BYTE, FLOAT, INT
-                        data);              // A pointer to the image data in memory
+    glTexImage2D(GL_TEXTURE_2D,         // texture type
+  	             0,                     // level
+  	             m_internal_format,     // sized internal format
+  	             m_width, m_height,     // dimensions
+                 0,                     // border
+                 m_image_format,        // image format
+                 GL_UNSIGNED_BYTE,      // image datatype
+                 data);                 // pointer to the image data
 
     // Generate Mipmaps
     if (m_mipmaps)
     	gen_mipmap();
+
+    unbind();
 }
 
 void Texture2D::upload(const float* data, int w, int h)
 {
-    // Generate Mipmaps
-    if (m_mipmaps)
-    	gen_mipmap();
-
     // Save the dimensions
     m_width = w;
     m_height = h;
 
-    DERR("here1 " << m_width << " " << m_height);
+    bind();
     // Specify storage for all levels of a 2D array texture
-    //  Create texture with log2 of width levels
-    glTextureStorage2D(id,
-                       (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
-                       m_internal_format,           // sized format of stored data *RGBA8
-                       m_width, m_height);          // in texels
+    glTexImage2D(GL_TEXTURE_2D,         // texture type
+  	             0,                     // level
+  	             m_internal_format,     // sized internal format
+  	             m_width, m_height,     // dimensions
+                 0,                     // border
+                 m_image_format,        // image format
+                 GL_FLOAT,              // image datatype
+                 data);                 // pointer to the image data
 
-    DERR("here");
-    // Specify a 2D texture subimage
-    glTextureSubImage2D(id,                 // texture id
-                        0,                  // level
-                        0, 0,               // xoffset, yoffset in the texture array
-                        m_width, m_height,  // width, height of the subimage
-                        m_image_format,     // format of the pixel data *RED, RGB, RGBA
-                        GL_FLOAT,           // data type of the pixel data, *BYTE, FLOAT, INT
-                        data);              // A pointer to the image data in memory
+    // Generate Mipmaps
+    if (m_mipmaps)
+    	gen_mipmap();
 
-    DERR("here2");
-
+    unbind();
 }
 
 void Texture2D::bind() const
 {
     glBindTexture(GL_TEXTURE_2D, id);
+}
+
+void Texture2D::unbind() const
+{
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Texture2D::bind_unit(uint32_t unit) const

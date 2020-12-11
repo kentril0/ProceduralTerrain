@@ -62,7 +62,6 @@ void Terrain::generate()
 
     float S, T, X, Y, Z;
     for (uint32_t j = 0; j < height; ++j)
-    {
         for (uint32_t i = 0; i < width; ++i)
         {
             uint32_t index = (j * width) + i;
@@ -88,7 +87,6 @@ void Terrain::generate()
 
             m_colors[index] = glm::vec4(1.0f);
         }
-    }
 
     // ---------------------------------------------------------------- 
     // Generate buffers
@@ -344,7 +342,7 @@ float Terrain::heightAt(const glm::vec3& position) const
 
 void Terrain::onTileScaleChanged(float newScale)
 {
-    newScale = std::min(newScale, 0.0001f);
+    newScale = std::max(newScale, 0.01f);
     m_tileScale = newScale;
     const uint32_t width = m_size.x;
     const uint32_t height = m_size.y;
@@ -378,7 +376,7 @@ void Terrain::onTileScaleChanged(float newScale)
 
 void Terrain::onHeightScaleChanged(float newScale)
 {
-    newScale = std::min(newScale, 0.0001f);
+    newScale = std::max(newScale, 0.01f);
     const float invHeightScale = 1 / m_heightScale;
     for (glm::vec3& v : m_vertices) 
             v.y *= invHeightScale * newScale;
@@ -392,3 +390,21 @@ void Terrain::onHeightScaleChanged(float newScale)
     updateNormalsBuffer();
 }
 
+void Terrain::onNoiseChanged()
+{
+    const uint32_t width = m_size.x;
+    const uint32_t height = m_size.y;
+    
+    for (uint32_t j = 0; j < height; ++j)
+        for (uint32_t i = 0; i < width; ++i)
+        {
+            uint32_t index = (j * width) + i;
+            m_vertices[index].y = m_heightMap[index] * m_heightScale;
+        }
+
+    // Update buffers
+    generateNormals();
+
+    updateVerticesBuffer();
+    updateNormalsBuffer();
+}

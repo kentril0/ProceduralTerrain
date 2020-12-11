@@ -67,6 +67,8 @@ public:
 
     void setHeightScale(float scale) { onHeightScaleChanged(scale); }
 
+    void applyNoiseMap() { onNoiseChanged(); }
+
     // TODO unused
     void setTexture(
         unsigned stage = 0
@@ -78,9 +80,16 @@ public:
     const glm::mat4& model() const { return m_model; }
 
     const glm::uvec2 size() const { return m_size; }
+
+    float tileScale() const { return m_tileScale; }
+
+    float heightScale() const { return m_heightScale; }
     
     const ProceduralTex2D& heightMap() const { return m_heightMap; }
 
+    uint32_t totalVertices() const { return m_vertices.size(); }
+
+    uint32_t totalIndices() const { return m_indices.size(); }
 
 private:    
 
@@ -105,6 +114,7 @@ private:
         //m_texCoords.clear();
         //m_colors.clear();
         //m_indices.clear();
+        m_heightMap.setSize(m_size.x);
         generate();
     }
 
@@ -112,6 +122,8 @@ private:
     void onTileScaleChanged(float newScale);
 
     void onHeightScaleChanged(float newScale);
+
+    void onNoiseChanged();
 
     void renderNormals();      ///< For debugging purposes
 

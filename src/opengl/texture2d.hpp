@@ -42,6 +42,8 @@ public:
  	 * @brief Bind the texture object
 	 */
 	void bind() const;
+
+	void unbind() const;
 	
 	/**
  	 * @brief Bind the texture to the texture unit

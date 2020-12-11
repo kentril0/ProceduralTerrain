@@ -4,6 +4,7 @@
 
 ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
   : m_resolution(res), 
+    m_scale(0.3),
     m_noiseType(t),
     m_texture(true)
 {
@@ -20,9 +21,10 @@ ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
     // Default: GL_RGB8, base: GL_RGB
     // TODO
 
+    m_pixelSize = 3;
     m_texture.set_internal_format(GL_RGB8);
     m_texture.set_image_format(GL_RGB);
-    m_pixelSize = 3;
+    //m_texture.set_filtering(GL_NEAREST, GL_NEAREST);
     m_texture.set_clamp_to_edge();
 
     fill();
@@ -59,14 +61,16 @@ void ProceduralTex2D::fillPerlin2D()
 {
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = Noise::perlin2D(x, y);
+            m_noiseMap[(y * m_resolution) + x] = 
+              Noise::perlin2D(x / m_scale, y / m_scale);
 }
 
 void ProceduralTex2D::fillOctavesPerlin2D()
 {
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = Noise::octavesPerlin2D(x, y);
+            m_noiseMap[(y * m_resolution) + x] = 
+              Noise::octavesPerlin2D(x / m_scale, y / m_scale);
 }
 
 void ProceduralTex2D::applyTexture()
@@ -89,12 +93,10 @@ void ProceduralTex2D::applyTexture()
 
 void ProceduralTex2D::setSize(uint32_t res)
 { 
-    uint32_t old_res = m_resolution;
-    m_resolution = res;
-
-    if (res > old_res)
+    if (res != m_resolution)
+    {
+        m_resolution = res;
         fill();
-    else if (res < old_res)
-        applyTexture();
+    }
 }
 

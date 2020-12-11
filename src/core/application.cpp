@@ -39,7 +39,7 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     sh_terrain = std::make_unique<Shader>("shaders/draw_terrain.vs",
                                           "shaders/draw_terrain.fs");
     // TODO local
-    terrain = std::make_unique<Terrain>(32, 32);
+    terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE);
       // TODO
       //std::make_shared<Texture2D>("images/farmland.jpg", false),
       //std::make_shared<Texture2D>("images/Grass0130_seamless.jpg", false),
@@ -98,11 +98,11 @@ void Application::loop()
     {
         // TODO
         // Frametime
-        LOG_INFO("Frametime: " << (1000.0f / frames) << " ms");
-        //fmtcntr->set_text("Ftime: " + std::to_string(1.0f / frames) + " ms");
+        //LOG_INFO("Frametime: " << (1000.0f / frames) << " ms");
+        //fmtcntr->set_text("Ftime: " + std::to_string(1000.0f / frames) + " ms");
 
         // FPS
-        LOG_INFO("FPS: " << (frames));
+        //LOG_INFO("FPS: " << (frames));
         //fpscntr->set_text("FPS: " + std::to_string(frames));
         
         framestamp += 1.0f;
@@ -213,9 +213,10 @@ void Application::show_interface()
     if (state == STATE_MODIFY)
     {
         // TODO fix on rescale
-        //ImGui::ShowDemoWindow(NULL);
+        ImGui::ShowDemoWindow(NULL);
 
-        if (!ImGui::Begin("Application controls", NULL))
+
+        if (!ImGui::Begin("Application Controls", NULL))
         {
             ImGui::End();
             return;
@@ -229,7 +230,7 @@ void Application::show_interface()
             // TODO UI scaling
         }
 
-        if (ImGui::CollapsingHeader("Camera settings"))
+        if (ImGui::CollapsingHeader("Camera Settings"))
         {
             // TODO help (?)
             glm::vec3 pos = camera->get_position();
@@ -260,98 +261,194 @@ void Application::show_interface()
             // TODO camera preset positions relative to terrain size
             
         }
-        
-        if (ImGui::CollapsingHeader("Terrain controls"))
+        if (ImGui::CollapsingHeader("Terrain Controls", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            static int dim = 32;
-
-            // Dimensions
-            if (ImGui::SliderInt("Terrain size", &dim, 4, 512))
-                terrain->setSize(dim, dim);
-            
-            static int use_type = 0;
-            const uint8_t TERR_COLORS = 0;
-            const uint8_t TERR_TEXTURES = 1;
-            ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); ImGui::SameLine();
-            ImGui::RadioButton("Use textures", &use_type, TERR_TEXTURES);
-
-            // Terrain Colors
-            if (use_type == TERR_COLORS)
             {
-                static glm::vec3 color1(1.0f);
-                static glm::vec3 color2(1.0f);
-                static glm::vec3 color3(1.0f);
-                ImGui::ColorEdit3("Color 1", glm::value_ptr(color1)); ImGui::SameLine(); 
-                HelpMarker("Click on the colored square to open a color picker.\n"
-                           "Click and hold to use drag and drop.\n"
-                           "Right-click on the colored square to show options.\n"
-                           "CTRL+click on individual component to input value.\n");
-                ImGui::ColorEdit3("Color 2", glm::value_ptr(color2));
-                ImGui::ColorEdit3("Color 3", glm::value_ptr(color3));
+                static int dim = TERRAIN_INIT_SIZE;
+                float tileScale = terrain->tileScale();
+                float heightScale = terrain->heightScale();
+
+                // Dimensions
+                // TODO ? with  [vertices^2]
+                if (ImGui::SliderInt("Terrain size", &dim, 4, 512))
+                    terrain->setSize(dim, dim);
+                if (ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 10.f))
+                    terrain->setTileScale(tileScale);
+                if (ImGui::SliderFloat("Height scale", &heightScale, 0.01f, 10.f))
+                    terrain->setHeightScale(heightScale);
             }
-            // Textures
-            else if (use_type == TERR_TEXTURES)
+            ImGui::Separator();
+            if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                // TODO read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-                // TODO scale icons
-                ImGuiIO& io = ImGui::GetIO();
-                ImGui::TextWrapped("Hello, below are images of textures");
-                //ImTextureID my_tex_id = io.Fonts->TexID;
-                //float my_tex_w = 96;
-                //float my_tex_h = 96;
-                
-                //ImTextureID my_tex_id = &((void)(terrain->heightMap().ID()));
-                uint32_t tex_id = terrain->heightMap().ID();
-                glm::uvec2 tex_size = terrain->heightMap().size();
+                static const ProceduralTex2D& noiseMap = terrain->heightMap();
+                int32_t seed = noiseMap.seed();
+                if (ImGui::DragInt("Seed", &seed))
+                    noiseMap.reseed(seed);
+                    
+                // Select noise function
+                static int noiseType = noiseMap.type();
+                ImGui::RadioButton("Random Noise", &noiseType, Noise::Type::Random); 
+                    //ImGui::SameLine();
+                ImGui::RadioButton("Perlin Noise", &noiseType, Noise::Type::Perlin2D);
+                ImGui::RadioButton("Accumulated Perlin Noise", &noiseType, 
+                                   Noise::Type::OctavesPerlin2D);
 
-                //glBindTexture(GL_TEXTURE_2D, my_tex_id);
-                ImTextureID my_tex_id = (void*)(intptr_t)tex_id;
-                
-                float my_tex_w = 96;
-                float my_tex_h = 96;
-
-                for (int i = 0; i < 3; ++i)
+                if (noiseType == Noise::Type::OctavesPerlin2D)
                 {
-                  if (i > 0)
-                    ImGui::SameLine();
-
-                  ImGui::BeginGroup();
-                    ImGui::Text("%u x %u", tex_size.x, tex_size.y);
-                    ImVec2 pos = ImGui::GetCursorScreenPos();
-                    ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-                    ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-                    ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-                    ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
-                    ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, 
-                                 uv_max, tint_col, border_col);
-                    if (ImGui::IsItemHovered())
-                    {
-                        ImGui::BeginTooltip();
-                        float region_sz = 32.0f;
-                        float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
-                        float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
-                        float zoom = 4.0f;
-                        if (region_x < 0.0f) { region_x = 0.0f; }
-                        else if (region_x > my_tex_w - region_sz) { 
-                            region_x = my_tex_w - region_sz; }
-                        if (region_y < 0.0f) { region_y = 0.0f; }
-                        else if (region_y > my_tex_h - region_sz) {
-                            region_y = my_tex_h - region_sz; }
-                        ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
-                        ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
-                                                         region_y + region_sz);
-                        ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
-                        ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, 
-                                            (region_y + region_sz) / my_tex_h);
-                        ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, 
-                                                       region_sz * zoom), 
-                                     uv0, uv1, tint_col, border_col);
-                        ImGui::EndTooltip();
-                    }
-                  ImGui::EndGroup();
+                    int32_t octaves = noiseMap.octaves();
+                    float persistence = noiseMap.persistence();
+                    // TODO (?)
+                    if (ImGui::SliderInt("Octaves", &octaves, 1, 10))
+                        noiseMap.setOctaves(octaves);
+                    if (ImGui::SliderFloat("Persistence", &persistence, 0.f, 1.f))
+                        noiseMap.setPersistence(persistence);
                 }
+
+                noiseMap.setType(static_cast<Noise::Type>(noiseType));
+
+                // TODO function
+                // Visualize the procedural texture
+                {
+                    static ImTextureID my_tex_id = (void*)(intptr_t)(procTex.ID());
+                    glm::uvec2 tex_size = procTex.size();
+
+                    const float my_tex_w = 128;
+                    const float my_tex_h = 128;
+
+                    ImGui::BeginGroup();
+                        ImGui::Text("%u x %u", tex_size.x, tex_size.y);
+                        ImVec2 pos = ImGui::GetCursorScreenPos();
+                        ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+                        ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+                        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+                        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+                        ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, 
+                                     uv_max, tint_col, border_col);
+                        if (ImGui::IsItemHovered())
+                        {
+                            ImGuiIO& io = ImGui::GetIO();
+                            ImGui::BeginTooltip();
+                            float region_sz = 32.0f;
+                            float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
+                            float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
+                            float zoom = 4.0f;
+                            if (region_x < 0.0f) { region_x = 0.0f; }
+                            else if (region_x > my_tex_w - region_sz) { 
+                                region_x = my_tex_w - region_sz; }
+                            if (region_y < 0.0f) { region_y = 0.0f; }
+                            else if (region_y > my_tex_h - region_sz) {
+                                region_y = my_tex_h - region_sz; }
+                            ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
+                            ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
+                                                             region_y + region_sz);
+                            ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
+                            ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, 
+                                                (region_y + region_sz) / my_tex_h);
+                            ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, 
+                                                           region_sz * zoom), 
+                                         uv0, uv1, tint_col, border_col);
+                            ImGui::EndTooltip();
+                        }
+                    ImGui::EndGroup();
+                }
+                if (ImGui::Button("Apply"))
+                {
+                    terrain->applyNoiseMap();
+                }
+                ImGui::TreePop();
             }
+            ImGui::Separator();
+            // TODO procedural texturing
+            if (ImGui::TreeNode("Texturing"))
+            {
+                static int use_type = 0;
+                const uint8_t TERR_COLORS = 0;
+                const uint8_t TERR_TEXTURES = 1;
+                ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); ImGui::SameLine();
+                ImGui::RadioButton("Use textures", &use_type, TERR_TEXTURES);
+
+                // Terrain Colors
+                if (use_type == TERR_COLORS)
+                {
+                    static glm::vec3 color1(1.0f);
+                    static glm::vec3 color2(1.0f);
+                    static glm::vec3 color3(1.0f);
+                    ImGui::ColorEdit3("Color 1", glm::value_ptr(color1)); ImGui::SameLine(); 
+                    HelpMarker("Click on the colored square to open a color picker.\n"
+                               "Click and hold to use drag and drop.\n"
+                               "Right-click on the colored square to show options.\n"
+                               "CTRL+click on individual component to input value.\n");
+                    ImGui::ColorEdit3("Color 2", glm::value_ptr(color2));
+                    ImGui::ColorEdit3("Color 3", glm::value_ptr(color3));
+                }
+                // Textures
+                else if (use_type == TERR_TEXTURES)
+                {
+                    // TODO read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+                    // TODO scale icons
+                    ImGuiIO& io = ImGui::GetIO();
+                    ImGui::TextWrapped("Hello, below are images of textures");
+                    //ImTextureID my_tex_id = io.Fonts->TexID;
+                    //float my_tex_w = 96;
+                    //float my_tex_h = 96;
+                    
+                    //ImTextureID my_tex_id = &((void)(terrain->heightMap().ID()));
+                    uint32_t tex_id = terrain->heightMap().ID();
+                    glm::uvec2 tex_size = terrain->heightMap().size();
+
+                    //glBindTexture(GL_TEXTURE_2D, my_tex_id);
+                    ImTextureID my_tex_id = (void*)(intptr_t)tex_id;
+                    
+                    float my_tex_w = 96;
+                    float my_tex_h = 96;
+
+                    for (int i = 0; i < 3; ++i)
+                    {
+                      if (i > 0)
+                        ImGui::SameLine();
+
+                      ImGui::BeginGroup();
+                        ImGui::Text("%u x %u", tex_size.x, tex_size.y);
+                        ImVec2 pos = ImGui::GetCursorScreenPos();
+                        ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+                        ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+                        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+                        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+                        ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, 
+                                     uv_max, tint_col, border_col);
+                        if (ImGui::IsItemHovered())
+                        {
+                            ImGui::BeginTooltip();
+                            float region_sz = 32.0f;
+                            float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
+                            float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
+                            float zoom = 4.0f;
+                            if (region_x < 0.0f) { region_x = 0.0f; }
+                            else if (region_x > my_tex_w - region_sz) { 
+                                region_x = my_tex_w - region_sz; }
+                            if (region_y < 0.0f) { region_y = 0.0f; }
+                            else if (region_y > my_tex_h - region_sz) {
+                                region_y = my_tex_h - region_sz; }
+                            ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
+                            ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
+                                                             region_y + region_sz);
+                            ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
+                            ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, 
+                                                (region_y + region_sz) / my_tex_h);
+                            ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, 
+                                                           region_sz * zoom), 
+                                         uv0, uv1, tint_col, border_col);
+                            ImGui::EndTooltip();
+                        }
+                      ImGui::EndGroup();
+                    }
+                }
             // Slope controls
+                ImGui::TreePop();
+            }
+            
+
+            
             
 
             // TODO noise functions
@@ -396,9 +493,8 @@ void Application::status_window()
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 
                     1000.0f / io.Framerate, io.Framerate);
         ImGui::Text("%d vertices, %d indices (%d triangles)", 
-                    io.MetricsRenderVertices, io.MetricsRenderIndices, 
-                    io.MetricsRenderIndices / 3);
-        ImGui::Text("%d active allocations", io.MetricsActiveAllocations);
+                    terrain->totalVertices(), terrain->totalIndices(),
+                    terrain->totalIndices() / 3);
 
         // TODO terrain score
         // current camera position
@@ -412,6 +508,8 @@ void Application::set_state_modify()
 
     // Show the cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    // TODO
+    // ImGui::SetNextWindowSize(ImVec2(width * 0.3, height * 0.8));
 }
 
 void Application::set_state_freefly()

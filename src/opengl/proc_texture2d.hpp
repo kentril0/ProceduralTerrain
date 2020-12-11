@@ -19,8 +19,6 @@ public:
      */
     ProceduralTex2D(uint32_t res, Noise::Type t = Noise::Random);
 
-    //~ProceduralTex2D() { delete[] data; }
-
     Noise::value_t operator[](uint32_t idx) const { return m_noiseMap[idx]; }
 
     //------------------------------------------------------------
@@ -29,16 +27,27 @@ public:
     /** @brief Sets a new size and refills and reapplies the texture */
     void setSize(uint32_t res);
 
-    /** @brief Sets a new noise type and refills and reapplies the texture */
-    void setNoiseType(Noise::Type t)
+    /** 
+     * @brief Sets a new noise type and refills and reapplies the texture
+     * @return True if changed else false
+     */
+    bool setNoiseType(Noise::Type t)
     {
         if (t != m_noiseType) 
         {
             m_noiseType = t; 
             fill();
+            return true;
         }
+        return false;
     }
 
+    void setScale(float scale)
+    {
+        m_scale = std::max(0.0001, scale);
+        if (m_noiseType != Noise::Random)
+            fill();
+    }
 
     //------------------------------------------------------------
 	// Getters
@@ -61,6 +70,7 @@ private:
 
 private:
 	uint32_t m_resolution;          ///< A square texture
+    float m_scale;                  ///< For noise scaling
     Noise::Type m_noiseType;        ///< Type of noise function
     std::vector<Noise::value_t> m_noiseMap;
 

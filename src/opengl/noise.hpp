@@ -22,6 +22,7 @@ public:
     {
         m_gen.seed(seed);
         m_seed = seed;
+        // TODO
     }
 
     /** @return Pseudorandom value from uniform distribution, in <0.0, 1.0> */
@@ -53,6 +54,13 @@ public:
         glm::clamp(persistence, 0.0001f, 1.0f);
         m_persistence = persistence;
     }
+
+    // Getters
+    static uint32_t seed() { return m_seed; }
+
+    static uint32_t octaves() { return m_octaves; }
+
+    static float persistence() { return m_persistence; }
 
 private:
     Noise();
