@@ -18,23 +18,18 @@ public:
         OctavesPerlin2D
     };
 
-    static void reseed(uint32_t seed)
-    {
-        m_gen.seed(seed);
-        m_seed = seed;
-        // TODO
-    }
+    Noise();
 
     /** @return Pseudorandom value from uniform distribution, in <0.0, 1.0> */
-    static value_t random() { return m_distrib(m_gen); }
+    value_t random() { return m_distrib(m_gen); }
 
     /** 
      * @brief 3D Perlin noise
      * @return Noise value in <0.0, 1.0>
      */
-    static value_t perlin(value_t x, value_t y, value_t z);
+    value_t perlin(value_t x, value_t y, value_t z) const;
 
-    static value_t perlin2D(value_t x, value_t y) { return perlin(x, y, 0); }
+    value_t perlin2D(value_t x, value_t y) const { return perlin(x, y, 0); }
 
     /**
      * @brief Sample perlin noise with various properties and sum it together
@@ -43,28 +38,11 @@ public:
      *          amplitutde = persistence ^ i
      * @return Summed noise value in <0.0, 1.0>
      */
-    static value_t octavesPerlin(value_t x, value_t y, value_t z);
+    value_t octavesPerlin(value_t x, value_t y, value_t z) const;
 
-    static value_t octavesPerlin2D(value_t x, value_t y);
-
-    static void setOctaves(uint32_t octaves) { m_octaves = octaves; }
-
-    static void setPersistence(float persistence)
-    {
-        glm::clamp(persistence, 0.0001f, 1.0f);
-        m_persistence = persistence;
-    }
-
-    // Getters
-    static uint32_t seed() { return m_seed; }
-
-    static uint32_t octaves() { return m_octaves; }
-
-    static float persistence() { return m_persistence; }
+    value_t octavesPerlin2D(value_t x, value_t y) const;
 
 private:
-    Noise();
-
     //@brief Linear interpolation
     static constexpr value_t lerp(value_t a, value_t b, value_t t) noexcept
     {
@@ -111,20 +89,19 @@ private:
         }
     }
 
-private:
-    static Noise instance;
-
-    static uint32_t m_seed;
-    static std::default_random_engine m_gen;
-    static std::uniform_real_distribution<value_t> m_distrib;
-
+public:
     static const uint32_t PERM_SIZE = 512;      ///< Size of the permutation table 
     static const uint32_t RANGE = 256;          ///< Range of values in the perm. table
 
-    static int32_t p[PERM_SIZE];                ///< Permutation table
+    uint32_t m_seed;
+    std::default_random_engine m_gen;
+    std::uniform_real_distribution<value_t> m_distrib;
+
+    int32_t p[PERM_SIZE];                ///< Permutation table
 
     // Accumulated Perlin noise global values
-    static uint32_t m_octaves;
-    static float  m_persistence;
+    uint32_t m_octaves;
+    float  m_persistence;
+
 };
 

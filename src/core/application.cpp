@@ -280,20 +280,23 @@ void Application::show_interface()
             ImGui::Separator();
             if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                static const ProceduralTex2D& noiseMap = terrain->heightMap();
+                static ProceduralTex2D& noiseMap = terrain->heightMap();
                 int32_t seed = noiseMap.seed();
                 if (ImGui::DragInt("Seed", &seed))
                     noiseMap.reseed(seed);
+                float scale = noiseMap.scale();
+                if (ImGui::SliderFloat("Scale", &scale, 0.f, 1.f))
+                    noiseMap.setScale(scale);
                     
                 // Select noise function
                 static int noiseType = noiseMap.type();
-                ImGui::RadioButton("Random Noise", &noiseType, Noise::Type::Random); 
+                ImGui::RadioButton("Random Noise", &noiseType, Noise::Random); 
                     //ImGui::SameLine();
-                ImGui::RadioButton("Perlin Noise", &noiseType, Noise::Type::Perlin2D);
+                ImGui::RadioButton("Perlin Noise", &noiseType, Noise::Perlin2D);
                 ImGui::RadioButton("Accumulated Perlin Noise", &noiseType, 
-                                   Noise::Type::OctavesPerlin2D);
+                                   Noise::OctavesPerlin2D);
 
-                if (noiseType == Noise::Type::OctavesPerlin2D)
+                if (noiseType == Noise::OctavesPerlin2D)
                 {
                     int32_t octaves = noiseMap.octaves();
                     float persistence = noiseMap.persistence();
@@ -309,8 +312,8 @@ void Application::show_interface()
                 // TODO function
                 // Visualize the procedural texture
                 {
-                    static ImTextureID my_tex_id = (void*)(intptr_t)(procTex.ID());
-                    glm::uvec2 tex_size = procTex.size();
+                    static ImTextureID my_tex_id = (void*)(intptr_t)(noiseMap.ID());
+                    glm::uvec2 tex_size = noiseMap.size();
 
                     const float my_tex_w = 128;
                     const float my_tex_h = 128;

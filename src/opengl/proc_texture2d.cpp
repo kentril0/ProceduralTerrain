@@ -54,23 +54,23 @@ void ProceduralTex2D::fillRandom()
 {
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = Noise::random();
+            m_noiseMap[(y * m_resolution) + x] = m_noise.random();
 }
 
 void ProceduralTex2D::fillPerlin2D()
 {
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = 
-              Noise::perlin2D(x / m_scale, y / m_scale);
+            m_noiseMap[(y * m_resolution) + x] = m_noise.perlin2D(x / m_scale, 
+                                                                  y / m_scale);
 }
 
 void ProceduralTex2D::fillOctavesPerlin2D()
 {
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = 
-              Noise::octavesPerlin2D(x / m_scale, y / m_scale);
+            m_noiseMap[(y * m_resolution) + x] = m_noise.octavesPerlin2D(
+                                                     x / m_scale, y / m_scale);
 }
 
 void ProceduralTex2D::applyTexture()

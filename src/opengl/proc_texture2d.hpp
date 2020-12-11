@@ -31,7 +31,7 @@ public:
      * @brief Sets a new noise type and refills and reapplies the texture
      * @return True if changed else false
      */
-    bool setNoiseType(Noise::Type t)
+    bool setType(Noise::Type t)
     {
         if (t != m_noiseType) 
         {
@@ -44,18 +44,49 @@ public:
 
     void setScale(float scale)
     {
-        m_scale = std::max(0.0001, scale);
-        if (m_noiseType != Noise::Random)
-            fill();
+        m_scale = std::max(0.0001f, scale);
+        if (m_noiseType != Noise::Random) { fill(); }
+    }
+
+    // From Noise class
+    void setOctaves(uint32_t octaves)
+    {
+        m_noise.m_octaves = octaves;
+        if (m_noiseType == Noise::OctavesPerlin2D) { fill(); }
+    }
+
+    void setPersistence(float persistence)
+    {
+        glm::clamp(persistence, 0.0001f, 1.0f);
+        m_noise.m_persistence = persistence;
+        if (m_noiseType == Noise::OctavesPerlin2D) { fill(); }
+    }
+
+    void reseed(uint32_t seed)
+    {
+        m_noise.m_gen.seed(seed);
+        m_noise.m_seed = seed;
+        fill();
     }
 
     //------------------------------------------------------------
 	// Getters
-    const Texture2D& texture() const { return m_texture; }
-
 	glm::uvec2 size() const { return glm::uvec2(m_resolution, m_resolution); }
 
+    float scale() const { return m_scale; }
+
+    const Texture2D& texture() const { return m_texture; }
+
     uint32_t ID() const { return m_texture.ID(); }
+
+    // From Noise class
+    uint32_t seed() const { return m_noise.m_seed; }
+
+    Noise::Type type() const { return m_noiseType; }
+
+    uint32_t octaves() const { return m_noise.m_octaves; }
+
+    float persistence() const { return m_noise.m_persistence; }
 
 private:
     void fill();
@@ -71,10 +102,12 @@ private:
 private:
 	uint32_t m_resolution;          ///< A square texture
     float m_scale;                  ///< For noise scaling
-    Noise::Type m_noiseType;        ///< Type of noise function
+
+    Noise m_noise;
+    Noise::Type m_noiseType;        ///< Type of noiseMap generator
     std::vector<Noise::value_t> m_noiseMap;
 
-    Texture2D m_texture;
+    Texture2D m_texture;            ///< To visualize the noiseMap
     uint32_t m_pixelSize;
     std::vector<float> m_colorMap;
 };

@@ -85,8 +85,8 @@ public:
 
     float heightScale() const { return m_heightScale; }
     
-    const ProceduralTex2D& heightMap() const { return m_heightMap; }
-
+    ProceduralTex2D& heightMap() { return m_heightMap; }
+    
     uint32_t totalVertices() const { return m_vertices.size(); }
 
     uint32_t totalIndices() const { return m_indices.size(); }

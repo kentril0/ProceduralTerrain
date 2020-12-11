@@ -2,18 +2,12 @@
 #include "noise.hpp"
 
 
-uint32_t Noise::m_seed = std::default_random_engine::default_seed;
-
-std::default_random_engine Noise::m_gen(m_seed);
-std::uniform_real_distribution<Noise::value_t> Noise::m_distrib(0.0, 1.0);
-
-int32_t Noise::p[PERM_SIZE];
-
-uint32_t Noise::m_octaves = 1;
-float  Noise::m_persistence = 0.5;
-
-
 Noise::Noise()
+  : m_seed(std::default_random_engine::default_seed),
+    m_gen(m_seed),
+    m_distrib(0.0, 1.0),
+    m_octaves(1),
+    m_persistence(0.5)
 {
     // Initialize permutation table
     
@@ -45,7 +39,7 @@ Noise::Noise()
  * @date 09 August 2014
  * @url https://adrianb.io/2014/08/09/perlinnoise.html
  */
-Noise::value_t Noise::perlin(Noise::value_t x, Noise::value_t y, Noise::value_t z)
+Noise::value_t Noise::perlin(Noise::value_t x, Noise::value_t y, Noise::value_t z) const
 {
     // Get the coordinates of the unit cube, in range
     //  Perlin noise always repeats every 256 coordinates
@@ -106,7 +100,7 @@ Noise::value_t Noise::perlin(Noise::value_t x, Noise::value_t y, Noise::value_t 
 } 
 
 Noise::value_t Noise::octavesPerlin(Noise::value_t x, Noise::value_t y, 
-                                    Noise::value_t z)
+                                    Noise::value_t z) const
 {
     Noise::value_t total = 0;
     Noise::value_t frequency = 1;
@@ -127,7 +121,7 @@ Noise::value_t Noise::octavesPerlin(Noise::value_t x, Noise::value_t y,
     return total / max_value;
 }
 
-Noise::value_t Noise::octavesPerlin2D(Noise::value_t x, Noise::value_t y)
+Noise::value_t Noise::octavesPerlin2D(Noise::value_t x, Noise::value_t y) const
 {
     Noise::value_t total = 0;
     Noise::value_t frequency = 1;
