@@ -163,29 +163,34 @@ void Texture2D::set_custom_wrap(uint32_t wrap_s, uint32_t wrap_t)
     glTextureParameteri(id, GL_TEXTURE_WRAP_T, wrap_t);	
 }
 
-void Texture2D::gen_mipmap()
+void Texture2D::set_filtering()
 {
-	glGenerateTextureMipmap(id);
-
     glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, m_filterMin);
     glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, m_filterMag);
 }
 
+void Texture2D::gen_mipmap()
+{
+	glGenerateTextureMipmap(id);
+    set_filtering();
+}
+
 void Texture2D::set_filtering(uint32_t min_f, uint32_t mag_f)
 {
-    glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, min_f);
-    glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, mag_f);
     m_filterMin = min_f;
     m_filterMag = mag_f;
+
+    set_filtering();
 }
 
 void Texture2D::set_linear_filtering()
 {
     // Returns the weighted average of the four texture elements that are closest 
     //  to the specified texture coordinate
-    set_filtering(GL_LINEAR, GL_LINEAR);
-    m_filterMin = GL_LINEAR;
+    m_filterMin = m_mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
     m_filterMag = GL_LINEAR;
+
+    set_filtering();
 }
 
 void Texture2D::activate(uint32_t unit) const

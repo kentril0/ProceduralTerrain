@@ -71,10 +71,14 @@ public:
 
     void reseed(uint32_t seed)
     {
+        m_noise.reseed(seed);
         m_noise.m_gen.seed(seed);
         m_noise.m_seed = seed;
         fill();
     }
+
+    // Querying modifies its changed state to false
+    bool changed() { bool c = m_changed; m_changed = false; return c; }
 
     //------------------------------------------------------------
 	// Getters
@@ -119,5 +123,7 @@ private:
     Texture2D m_texture;            ///< To visualize the noiseMap
     uint32_t m_pixelSize;
     std::vector<float> m_colorMap;
+
+    bool m_changed;                 ///< Whether any value was changed
 };
 

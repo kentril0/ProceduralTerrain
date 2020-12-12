@@ -6,7 +6,8 @@ ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
   : m_resolution(res), 
     m_scale(27.6),
     m_noiseType(t),
-    m_texture(true)
+    m_texture(true),
+    m_changed(false)
 {
     // Internal format variants
     //  GL_R8, base format: GL_RED
@@ -48,6 +49,7 @@ void ProceduralTex2D::fill()
     }
 
     applyTexture();
+    m_changed = true;
 }
 
 void ProceduralTex2D::fillRandom()

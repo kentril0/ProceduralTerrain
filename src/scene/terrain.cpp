@@ -466,7 +466,11 @@ void Terrain::onHeightScaleChanged(float newScale)
 void Terrain::onNoiseChanged()
 {
     // TODO really changed??
-    
+    if (!m_heightMap.changed())  
+        return;
+
+    DERR("Update height map");
+
     const uint32_t width = m_size.x;
     const uint32_t height = m_size.y;
     
@@ -513,5 +517,20 @@ glm::vec3 Terrain::regionColorIn(float heightValue) const
         return m_regions.back().color;
     else
         return glm::vec3(1.f, 1.f, 1.f);
+}
+
+void Terrain::onRegionsChanged()
+{
+    const uint32_t width = m_size.x;
+    const uint32_t height = m_size.y;
+    
+    for (uint32_t y = 0; y < height; ++y)
+        for (uint32_t x = 0; x < width; ++x)
+        {
+            uint32_t index = y * width + x;
+            m_colors[index] = regionColorIn(m_heightMap[index]);
+        }
+
+    m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
 }
 

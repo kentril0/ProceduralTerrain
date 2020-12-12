@@ -23,6 +23,7 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     // TODO initialize TODO
     // --------------------------------------------------------------------------
     camera = std::make_unique<Camera>(float(width) / float(height));
+    cameraSetPresetSideWays();
     
     sh_skybox = std::make_shared<Shader>("shaders/draw_skybox.vs", 
                                          "shaders/draw_skybox.fs");
@@ -137,12 +138,21 @@ void Application::render()
     glm::mat4 proj = camera->get_proj_matrix();
     glm::mat4 view = camera->get_view_matrix();
 
+    // TODO put into terrain
+    // TODO MVP matrix
     // Render the terrain
     sh_terrain->use();
     sh_terrain->set_mat4("model", terrain->model());
     sh_terrain->set_mat4("view", view);
     sh_terrain->set_mat4("proj", proj);
+
+    if (m_wireframe)
+        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
     terrain->render();
+
+    if (m_wireframe)
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
     // Render skybox as last
     skybox->render(view, proj);
@@ -174,7 +184,7 @@ void Application::on_resize(GLFWwindow *window, int width, int height)
 {
     this->width = width;
     this->height = height;
-    LOG_INFO("SCREEN RESIZE");
+    DERR("SCREEN RESIZE");
 }
 
 void Application::on_mouse_move(GLFWwindow *window, double x, double y) 
@@ -228,6 +238,9 @@ void Application::show_interface()
             static bool vsync = true;
             if (ImGui::Checkbox(" Vertical sync", &vsync))
                 set_vsync(vsync);
+            if (ImGui::Checkbox(" Wireframe", &m_wireframe)) {}
+
+
             // TODO UI scaling
         }
 
@@ -350,9 +363,24 @@ void Application::show_interface()
             // TODO procedural texturing
             if (ImGui::TreeNode("Texturing"))
             {
+
                 static int use_type = 0;
+                static int filterType = 0;
                 const uint8_t TERR_COLORS = 0;
                 const uint8_t TERR_TEXTURES = 1;
+                const char* items[] = { "Nearest", "Linear" };
+
+                // Select Filtering
+                ImGui::NewLine();
+                if (ImGui::Combo("Filtering", &filterType, items, IM_ARRAYSIZE(items)))
+                {
+                    if (filterType == 0)
+                        terrain->setFilteringPoint();
+                    else if (filterType == 1)
+                        terrain->setFilteringLinear();
+                }
+
+                // Select type of texturing
                 ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); 
                 HelpMarker("Click on the colored square to open a color picker.\n"
                                "Click and hold to use drag and drop.\n"
@@ -380,12 +408,16 @@ void Application::show_interface()
                         ImGui::InputText(elemName.c_str(), r.name.data(), 16);
                         ImGui::SameLine();
                         elemName += std::to_string(i);
-                        ImGui::InputFloat(elemName.c_str(), &r.toHeight, 0.01f, 1.0f);
+                        if (ImGui::SliderFloat(elemName.c_str(), &r.toHeight, 0.01f, 1.0f))
+                            terrain->onRegionsChanged();
+
                         ImGui::SameLine();
                         elemName += std::to_string(i);
-                        ImGui::ColorEdit3(elemName.c_str(), (float*)&r.color, 
+                        if (ImGui::ColorEdit3(elemName.c_str(), (float*)&r.color, 
                                           ImGuiColorEditFlags_NoInputs | 
-                                          ImGuiColorEditFlags_NoLabel);
+                                          ImGuiColorEditFlags_NoLabel))
+                            terrain->onRegionsChanged();
+
                         ImGui::Separator();
                     }
                     ImGui::PopItemWidth();
@@ -558,21 +590,3 @@ void Application::cameraSetPresetSideWays()
     camera->set_field_of_view(45);
 }
 
-            /*
-            Top
-                pos  5x, 20y, 0z
-                pitch -89
-                yaw 270
-                fov 45
-            Front
-                0, 5, 13
-                pitch -22
-                yaw 270
-                fov 45
-            Side ways
-                7, 11, 12
-                -40
-                245
-                45
-
-            */

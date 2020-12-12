@@ -57,6 +57,8 @@ public:
         return (v - min) / (max - min);
     }
 
+    void reseed(uint32_t seed);
+
 private:
     //@brief Linear interpolation
     static constexpr value_t lerp(value_t a, value_t b, value_t t) noexcept

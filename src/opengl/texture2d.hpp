@@ -87,6 +87,8 @@ public:
 	uint32_t ID() const { return id; }
 
 	glm::uvec2 size() const { return glm::uvec2(m_width, m_height); }
+private:
+    void set_filtering();
 
 private:
 	uint32_t id;

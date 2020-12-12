@@ -65,7 +65,7 @@ private:
     }
 
     // Functions modifying application state
-    void set_state(int s) { LOG_INFO("New state: " << s); state = s; }
+    void set_state(int s) { /* DERR("New state: " << s); */ state = s; }
 
     void set_state_modify();    ///< Shows interface for modifications
     void set_state_freefly();   ///< Hides interface and enables flying w/ camera
@@ -150,6 +150,7 @@ private:
     int state;
 
 
+    bool m_wireframe = false;
     // ----------------------------------------------------------------------------
     // Scene
     // TODO scene objects, scene shaders, etc.

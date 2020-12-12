@@ -61,6 +61,13 @@ public:
 
     void applyNoiseMap() { onNoiseChanged(); }
 
+    void onRegionsChanged();
+
+    // For surface texture
+    void setFilteringPoint() { m_surface.set_filtering(GL_NEAREST, GL_NEAREST); }
+
+    void setFilteringLinear() { m_surface.set_linear_filtering(); }
+
     // TODO unused
     void setTexture(
         unsigned stage = 0
