@@ -17,7 +17,8 @@ Terrain::Terrain(uint32_t x, uint32_t y,
   m_model(model),
   m_invModel(glm::inverse(model)),
   m_heightMap(x),
-  m_surface(true)
+  m_surface(true),
+  m_useFalloff(true)
 {
     m_surface.set_internal_format(GL_RGB8);
     m_surface.set_image_format(GL_RGB);
@@ -25,6 +26,7 @@ Terrain::Terrain(uint32_t x, uint32_t y,
     m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
 
     initRegions();
+    generateFalloffMap();
     generate();
 }
 
@@ -37,7 +39,8 @@ Terrain::Terrain(const glm::uvec2& size,
   m_model(model),
   m_invModel(glm::inverse(model)),
   m_heightMap(size.x),
-  m_surface(true)
+  m_surface(true),
+  m_useFalloff(true)
 {
     m_surface.set_internal_format(GL_RGB8);
     m_surface.set_image_format(GL_RGB);
@@ -45,6 +48,7 @@ Terrain::Terrain(const glm::uvec2& size,
     m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
 
     initRegions();
+    generateFalloffMap();
     generate();
 }
 
@@ -83,6 +87,8 @@ void Terrain::generate()
 
             // Sample the height - value between <0; 1>
             float heightValue = m_heightMap[index];
+            if (m_useFalloff)
+                heightValue = glm::clamp(heightValue - m_falloffMap[index], 0.f, 1.f);
 
             // Texture coords of the terrain from top-left (0,0) to bottom right (1,1)
             S = x / (float)(width -1);
@@ -110,7 +116,7 @@ void Terrain::generate()
     generateNormals();
 
     generateBuffers();
-    m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
+    m_surface.upload((float*)&m_colors[0], width, height);
 
     LOG_OK("Terrain has been loaded!");
 
@@ -390,21 +396,19 @@ float Terrain::heightAt(const glm::vec3& position) const
 
 void Terrain::regenerate(const glm::uvec2& newSize)
 {
-    if (newSize == m_size)
+    if (newSize == m_size && !m_falloffChanged)
         return;
 
     m_size = newSize;
 
-    // TODO better
     m_vao.unbind();
     m_vao.clear();
-    //m_vertices.clear();
-    //m_normals.clear();
-    //m_texCoords.clear();
-    //m_colors.clear();
-    //m_indices.clear();
+
     m_heightMap.setSize(m_size.x);
+    generateFalloffMap();
     generate();
+
+    m_falloffChanged = false;
 }
 
 void Terrain::onTileScaleChanged(float newScale)
@@ -479,6 +483,8 @@ void Terrain::onNoiseChanged()
         {
             uint32_t index = y * width + x;
             float heightValue = m_heightMap[index]; 
+            if (m_useFalloff)
+                heightValue = glm::clamp(heightValue - m_falloffMap[index], 0.f, 1.f);
 
             m_vertices[index].y = heightValue * m_heightScale;
             m_colors[index] = regionColorIn(heightValue);
@@ -531,6 +537,22 @@ void Terrain::onRegionsChanged()
             m_colors[index] = regionColorIn(m_heightMap[index]);
         }
 
-    m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
+    m_surface.upload((float*)&m_colors[0], width, height);
 }
+
+void Terrain::generateFalloffMap()
+{
+    m_falloffMap.resize(m_size.x * m_size.y);
+
+    const float sizeX = m_size.x;
+    const float sizeY = m_size.y;
+    for (uint32_t i = 0; i < m_size.y; ++i)
+        for (uint32_t j = 0; j < m_size.x; ++j)
+        {
+            float x = i / sizeY * 2 -1;
+            float y = j / sizeX * 2 -1;
+            m_falloffMap[i * m_size.x + j] = fade(std::max(fabs(x), fabs(y)));
+        }
+}
+
 

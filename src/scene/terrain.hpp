@@ -68,6 +68,14 @@ public:
 
     void setFilteringLinear() { m_surface.set_linear_filtering(); }
 
+    void enableFalloffMap(bool f)
+    {
+        if (f == m_useFalloff)
+            return;
+        m_falloffChanged = true;
+        m_useFalloff = f;
+    }
+
     // TODO unused
     void setTexture(
         unsigned stage = 0
@@ -158,7 +166,7 @@ private:
     std::shared_ptr<VertexBuffer> m_vboVertices;
     std::shared_ptr<VertexBuffer> m_vboNormals;
     std::shared_ptr<VertexBuffer> m_vboTexels;
-    std::shared_ptr<VertexBuffer> m_vboColors;
+    //std::shared_ptr<VertexBuffer> m_vboColors;
 
     ProceduralTex2D m_heightMap;          ///< Procedurally generated height map
 
@@ -168,6 +176,21 @@ private:
 
     std::vector<std::shared_ptr<Texture2D>> m_textures;    ///< Surface textures
     Texture2D m_surface;                  ///< Final surface texture
+
+    // Falloff map
+    bool m_useFalloff;
+    bool m_falloffChanged = false;
+    std::vector<float> m_falloffMap;
+
+    void generateFalloffMap();
+
+    const float fade_a = 3.f;
+    const float fade_b = 2.2f;
+    constexpr float fade(float v) const
+    {
+        return pow(v,fade_a) / (pow(v,fade_a) + pow((fade_b - fade_b * v), fade_a));
+    }
+
 };
 
 

@@ -286,14 +286,18 @@ void Application::show_interface()
             {
                 static int dim = TERRAIN_INIT_SIZE;
                 static bool autoUpdate = false;
+                static bool falloff = true;
                 float tileScale = terrain->tileScale();
                 float heightScale = terrain->heightScale();
 
+                if (ImGui::Checkbox(" Falloff Map", &falloff))
+                    terrain->enableFalloffMap(falloff);
                 // TODO ? with  [vertices^2]
                 ImGui::SliderInt("Terrain size", &dim, 4, 512);
                 ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 10.f);
                 ImGui::SliderFloat("Height scale", &heightScale, 0.01f, 10.f);
-                
+
+                ImGui::NewLine();
                 if (ImGui::Button("Generate"))
                 {
                     terrain->setSize(dim, dim);
@@ -360,7 +364,6 @@ void Application::show_interface()
                 ImGui::TreePop();
             }
             ImGui::Separator();
-            // TODO procedural texturing
             if (ImGui::TreeNode("Texturing"))
             {
 

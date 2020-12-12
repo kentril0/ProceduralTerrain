@@ -57,7 +57,7 @@ public:
 
     void setPersistence(float persistence)
     {
-        glm::clamp(persistence, 0.0001f, 1.0f);
+        persistence = glm::clamp(persistence, 0.0001f, 1.0f);
         m_noise.m_persistence = persistence;
         if (m_noiseType == Noise::OctavesPerlin2D) { fill(); }
     }
