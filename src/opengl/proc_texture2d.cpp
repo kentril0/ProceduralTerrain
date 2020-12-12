@@ -4,7 +4,7 @@
 
 ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
   : m_resolution(res), 
-    m_scale(0.3),
+    m_scale(27.6),
     m_noiseType(t),
     m_texture(true)
 {
@@ -61,16 +61,32 @@ void ProceduralTex2D::fillPerlin2D()
 {
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = m_noise.perlin2D(x / m_scale, 
-                                                                  y / m_scale);
+            m_noiseMap[(y * m_resolution) + x] = m_noise.perlin2DNorm(x / m_scale, 
+                                                                      y / m_scale);
 }
 
 void ProceduralTex2D::fillOctavesPerlin2D()
 {
+    float maxNoise = -9999, minNoise = 9999;
     for (uint32_t y = 0; y < m_resolution; ++y)
         for (uint32_t x = 0; x < m_resolution; ++x)
-            m_noiseMap[(y * m_resolution) + x] = m_noise.octavesPerlin2D(
-                                                     x / m_scale, y / m_scale);
+        {
+            Noise::value_t noise = m_noise.octavesPerlin2D(x / m_scale, y / m_scale);
+            m_noiseMap[y * m_resolution + x] = noise;
+
+            if (noise > maxNoise)
+                maxNoise = noise;
+            else if (noise < minNoise)
+                minNoise = noise;
+        }
+
+    // Normalize to <0., 1.>
+    for (uint32_t y = 0; y < m_resolution; ++y)
+        for (uint32_t x = 0; x < m_resolution; ++x)
+        {
+            uint32_t index = y * m_resolution + x;
+            m_noiseMap[index] = Noise::inverseLerp(minNoise, maxNoise, m_noiseMap[index]);
+        }
 }
 
 void ProceduralTex2D::applyTexture()

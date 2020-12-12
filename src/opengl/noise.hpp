@@ -24,23 +24,38 @@ public:
     value_t random() { return m_distrib(m_gen); }
 
     /** 
-     * @brief 3D Perlin noise
-     * @return Noise value in <0.0, 1.0>
+     * @brief Perlin noise in 3D
+     * @return Noise value in <-1.0, 1.0>
      */
     value_t perlin(value_t x, value_t y, value_t z) const;
 
+    /** 
+     * @brief Normalized Perlin noise in 3D
+     * @return Noise value in <0.0, 1.0>
+     */
+    value_t perlinNorm(value_t x, value_t y, value_t z) const
+    {
+        return (perlin(x, y, z) + 1) * 0.5;
+    }
+
     value_t perlin2D(value_t x, value_t y) const { return perlin(x, y, 0); }
 
+    value_t perlin2DNorm(value_t x, value_t y) const { return perlinNorm(x, y, 0); }
     /**
      * @brief Sample perlin noise with various properties and sum it together
      * @param octaves Number of octaves to sum
      * @param persistence Influence of each successive octave i
      *          amplitutde = persistence ^ i
-     * @return Summed noise value in <0.0, 1.0>
+     * @return Summed noise value in <-1.0, 1.0>
      */
     value_t octavesPerlin(value_t x, value_t y, value_t z) const;
 
     value_t octavesPerlin2D(value_t x, value_t y) const;
+
+    static constexpr value_t inverseLerp(value_t min, value_t max, value_t v) noexcept
+    {
+        return (v - min) / (max - min);
+    }
 
 private:
     //@brief Linear interpolation
@@ -101,7 +116,8 @@ public:
 
     // Accumulated Perlin noise global values
     uint32_t m_octaves;
-    float  m_persistence;
+    float    m_persistence;
+    float    m_lacunarity;
 
 };
 

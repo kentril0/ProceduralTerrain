@@ -17,7 +17,7 @@ public:
      * @param res Resolution, both width and height are same
      * @param t Type of noise function
      */
-    ProceduralTex2D(uint32_t res, Noise::Type t = Noise::Random);
+    ProceduralTex2D(uint32_t res, Noise::Type t = Noise::OctavesPerlin2D);
 
     Noise::value_t operator[](uint32_t idx) const { return m_noiseMap[idx]; }
 
@@ -62,6 +62,13 @@ public:
         if (m_noiseType == Noise::OctavesPerlin2D) { fill(); }
     }
 
+    void setLacunarity(float lacunarity)
+    {
+        lacunarity = std::max(1.f, lacunarity);
+        m_noise.m_lacunarity = lacunarity;
+        if (m_noiseType == Noise::OctavesPerlin2D) { fill(); }
+    }
+
     void reseed(uint32_t seed)
     {
         m_noise.m_gen.seed(seed);
@@ -87,6 +94,8 @@ public:
     uint32_t octaves() const { return m_noise.m_octaves; }
 
     float persistence() const { return m_noise.m_persistence; }
+    
+    float lacunarity() const { return m_noise.m_lacunarity; }
 
 private:
     void fill();

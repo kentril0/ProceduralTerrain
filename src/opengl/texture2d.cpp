@@ -7,7 +7,9 @@ Texture2D::Texture2D(bool mps)
       m_height(0), 
       m_internal_format(GL_RGBA8),
       m_image_format(GL_RGBA),
-      m_mipmaps(mps)
+      m_mipmaps(mps),
+      m_filterMin(GL_LINEAR_MIPMAP_LINEAR),
+      m_filterMag(GL_LINEAR)
 {
     glCreateTextures(GL_TEXTURE_2D, 1, &id);
 }
@@ -17,7 +19,9 @@ Texture2D::Texture2D(const std::string& filename, bool alpha, bool mps)
       m_height(0), 
       m_internal_format(GL_RGBA8),
       m_image_format(alpha ? GL_RGBA : GL_RGB),
-      m_mipmaps(mps)
+      m_mipmaps(mps),
+      m_filterMin(GL_LINEAR_MIPMAP_LINEAR),
+      m_filterMag(GL_LINEAR)
 {
     DERR("Texture def CONSTR");
     glCreateTextures(GL_TEXTURE_2D, 1, &id);
@@ -163,14 +167,16 @@ void Texture2D::gen_mipmap()
 {
 	glGenerateTextureMipmap(id);
 
-    glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, m_filterMin);
+    glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, m_filterMag);
 }
 
 void Texture2D::set_filtering(uint32_t min_f, uint32_t mag_f)
 {
     glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, min_f);
     glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, mag_f);
+    m_filterMin = min_f;
+    m_filterMag = mag_f;
 }
 
 void Texture2D::set_linear_filtering()
@@ -178,6 +184,8 @@ void Texture2D::set_linear_filtering()
     // Returns the weighted average of the four texture elements that are closest 
     //  to the specified texture coordinate
     set_filtering(GL_LINEAR, GL_LINEAR);
+    m_filterMin = GL_LINEAR;
+    m_filterMag = GL_LINEAR;
 }
 
 void Texture2D::activate(uint32_t unit) const

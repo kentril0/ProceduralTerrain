@@ -48,20 +48,12 @@ public:
     // ------------------------------------------------------------------------
     void setModel(const glm::mat4& m) { m_model = m; m_invModel = glm::inverse(m); }
 
-    void debugRender();
-
     /**@brief Sets a new size of the terrain and refills the buffers */
-    void setSize(const glm::uvec2& size) { m_size = size; regenerate(); }
+    void setSize(const glm::uvec2& size) { regenerate(size); }
 
-    void setSize(uint32_t x, uint32_t z)
-    {
-        m_size = glm::uvec2(x, z); regenerate();
-    }
+    void setSize(uint32_t x, uint32_t z) {  regenerate(glm::uvec2(x, z)); }
 
-    void setSize(uint32_t size)
-    {
-        m_size = glm::uvec2(size, size); regenerate();
-    }
+    void setSize(uint32_t size) { regenerate(glm::uvec2(size, size)); }
 
     void setTileScale(float scale) { onTileScaleChanged(scale); }
 
@@ -91,8 +83,24 @@ public:
 
     uint32_t totalIndices() const { return m_indices.size(); }
 
-private:    
+    // Height-based texturing
+    struct Region
+    {
+        float toHeight;
+        // TODO union Texture2D
+        glm::vec3 color;
+        std::string name;
 
+        Region(const char* name, float height, const glm::vec3& c)
+          : toHeight(height), color(c), name(name) {}
+
+        void addRegion() {}
+    };
+
+    std::vector<Region>& regions() { return m_regions; }
+
+
+private:    
     void generate();
 
     void generateIndices();
@@ -103,21 +111,7 @@ private:
     void updateVerticesBuffer();
     void updateNormalsBuffer();
 
-
-    // TODO better
-    void regenerate()
-    {
-        m_vao.unbind();
-        m_vao.clear();
-        //m_vertices.clear();
-        //m_normals.clear();
-        //m_texCoords.clear();
-        //m_colors.clear();
-        //m_indices.clear();
-        m_heightMap.setSize(m_size.x);
-        generate();
-    }
-
+    void regenerate(const glm::uvec2& newSize);
 
     void onTileScaleChanged(float newScale);
 
@@ -125,7 +119,11 @@ private:
 
     void onNoiseChanged();
 
-    void renderNormals();      ///< For debugging purposes
+    void initRegions();
+    
+    glm::vec3 regionColorIn(float height) const;
+
+    //void renderNormals();      ///< For debugging purposes
 
 private:
     glm::uvec2 m_size;
@@ -143,7 +141,7 @@ private:
     std::vector<glm::vec3> m_vertices;
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
-    std::vector<glm::vec4> m_colors;      ///< +multitexture blending ratios
+    std::vector<glm::vec3> m_colors;
     std::vector<uint32_t> m_indices;      ///< Indices of vertices
 
     // Buffers
@@ -154,6 +152,10 @@ private:
     std::shared_ptr<VertexBuffer> m_vboColors;
 
     ProceduralTex2D m_heightMap;          ///< Procedurally generated height map
+
+    // Height-based texturing - colored / textured regions based on height
+    std::vector<Region> m_regions;
+
 
     std::vector<std::shared_ptr<Texture2D>> m_textures;    ///< Surface textures
     Texture2D m_surface;                  ///< Final surface texture

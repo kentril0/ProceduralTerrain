@@ -160,7 +160,7 @@ private:
 
     std::unique_ptr<Shader> sh_terrain;
     std::unique_ptr<Terrain> terrain;
-    const uint32_t TERRAIN_INIT_SIZE = 32;
+    const uint32_t TERRAIN_INIT_SIZE = 100;
 
 
 

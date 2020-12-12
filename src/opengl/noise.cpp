@@ -6,8 +6,9 @@ Noise::Noise()
   : m_seed(std::default_random_engine::default_seed),
     m_gen(m_seed),
     m_distrib(0.0, 1.0),
-    m_octaves(1),
-    m_persistence(0.5)
+    m_octaves(4),
+    m_persistence(0.5),
+    m_lacunarity(2.)
 {
     // Initialize permutation table
     
@@ -59,53 +60,60 @@ Noise::value_t Noise::perlin(Noise::value_t x, Noise::value_t y, Noise::value_t 
 
     // Get unique value for every coordinate using hash function
     //  hashes all 8 unit cube coordinates
-    int aaa, aba, aab, abb, baa, bba, bab, bbb;
-    aaa = p[ p[p[xi  ] + yi  ] + zi  ];
-    aba = p[ p[p[xi  ] + yi+1] + zi  ];
-    aab = p[ p[p[xi  ] + yi  ] + zi+1];
-    abb = p[ p[p[xi  ] + yi+1] + zi+1];
-    baa = p[ p[p[xi+1] + yi  ] + zi  ];
-    bba = p[ p[p[xi+1] + yi+1] + zi  ];
-    bab = p[ p[p[xi+1] + yi  ] + zi+1];
-    bbb = p[ p[p[xi+1] + yi+1] + zi+1];
-
-    //const int32_t A = p[xi] + yi;
-    //const int32_t AA = p[A] + zi;
-    //const int32_t AB = p[A + 1] + zi;
-    //const int32_t B = p[xi + 1] + yi;
-    //const int32_t BA = p[B] + zi;
-    //const int32_t BB = p[B + 1] + zi;
+    const int32_t A = p[xi] + yi;
+    const int32_t AA = p[A] + zi;
+    const int32_t AB = p[A + 1] + zi;
+    const int32_t B = p[xi + 1] + yi;
+    const int32_t BA = p[B] + zi;
+    const int32_t BB = p[B + 1] + zi;
 
     // Weighted average based on the faded (u,v,w)
-    Noise::value_t x1, x2, y1, y2;
-
-    x1 = lerp(grad(aaa, x  , y  , z),
-              grad(baa, x-1, y  , z),
-              u);
-    x2 = lerp(grad(aba, x  , y-1, z),
-              grad(bba, x-1, y-1, z),
-              u);
-    y1 = lerp(x1, x2, v);
-
-    x1 = lerp(grad(aab, x  , y  , z-1),
-              grad(bab, x-1, y  , z-1),
-              u);
-    x2 = lerp(grad(abb, x  , y-1, z-1),
-              grad(bbb, x-1, y-1, z-1),
-              u);
-    y2 = lerp(x1, x2, v);
-
-    // For convenience, bind the result to 0 - 1 (theoretical min/max before is [-1, 1])
-    return (lerp(y1, y2, w) +1) / 2;
+    return lerp(lerp(lerp(grad(p[AA], x  , y  , z),
+                          grad(p[BA], x-1, y  , z),
+                          u), 
+                     lerp(grad(p[AB], x  , y-1, z),
+                          grad(p[BB], x-1, y-1, z),
+                          u), 
+                     v), 
+                lerp(lerp(grad(p[AA+1], x  , y  , z-1),
+                          grad(p[BA+1], x-1, y  , z-1),
+                          u), 
+                     lerp(grad(p[AB+1], x  , y-1, z-1),
+                          grad(p[BB+1], x-1, y-1, z-1),
+                          u), 
+                     v), 
+                w);
 } 
+
+Noise::value_t Noise::octavesPerlin2D(Noise::value_t x, Noise::value_t y) const
+{
+    Noise::value_t total = 0;           ///< Noise value
+    //Noise::value_t max_value = 0;       ///< Normalize
+    Noise::value_t amplitude = 1;
+    Noise::value_t frequency = 1;
+
+    for(uint32_t i = 0; i < m_octaves; ++i)
+    {
+        total += perlin2D(x * frequency, y * frequency) * amplitude;
+        
+        //max_value += amplitude;
+        
+        // Apply persistence in <0., 1.>
+        amplitude *= m_persistence;
+        frequency *= m_lacunarity;
+    }
+    
+    // Normalize to <0.0, 1.0>
+    return total; /// max_value;
+}
 
 Noise::value_t Noise::octavesPerlin(Noise::value_t x, Noise::value_t y, 
                                     Noise::value_t z) const
 {
     Noise::value_t total = 0;
+    Noise::value_t max_value = 0; 
     Noise::value_t frequency = 1;
     Noise::value_t amplitude = 1;
-    Noise::value_t max_value = 0; 
 
     for(uint32_t i = 0; i < m_octaves; ++i)
     {
@@ -114,31 +122,8 @@ Noise::value_t Noise::octavesPerlin(Noise::value_t x, Noise::value_t y,
         max_value += amplitude;
         
         amplitude *= m_persistence;
-        frequency *= 2;
+        frequency *= m_lacunarity;
     }
     
-    // Normalize to <0.0, 1.0>
     return total / max_value;
 }
-
-Noise::value_t Noise::octavesPerlin2D(Noise::value_t x, Noise::value_t y) const
-{
-    Noise::value_t total = 0;
-    Noise::value_t frequency = 1;
-    Noise::value_t amplitude = 1;
-    Noise::value_t max_value = 0; 
-
-    for(uint32_t i = 0; i < m_octaves; ++i)
-    {
-        total += perlin2D(x * frequency, y * frequency) * amplitude;
-        
-        max_value += amplitude;
-        
-        amplitude *= m_persistence;
-        frequency *= 2;
-    }
-    
-    // Normalize to <0.0, 1.0>
-    return total / max_value;
-}
-

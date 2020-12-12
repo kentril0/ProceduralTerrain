@@ -94,6 +94,7 @@ private:
 	uint32_t m_width, m_height;
 	uint32_t m_internal_format, m_image_format;
 
-	bool m_mipmaps;
+	bool m_mipmaps;             ///< Whether mipmaps are used
+    uint32_t m_filterMin, m_filterMag;
 };
 

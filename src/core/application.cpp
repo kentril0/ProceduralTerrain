@@ -39,7 +39,8 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     sh_terrain = std::make_unique<Shader>("shaders/draw_terrain.vs",
                                           "shaders/draw_terrain.fs");
     // TODO local
-    terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE);
+    terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
+                                        0.2f, 2.f);
       // TODO
       //std::make_shared<Texture2D>("images/farmland.jpg", false),
       //std::make_shared<Texture2D>("images/Grass0130_seamless.jpg", false),
@@ -197,6 +198,7 @@ void Application::on_key_pressed(GLFWwindow *window, int key, int scancode, int 
 
 static void HelpMarker(const char* desc)
 {
+    ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
     {
@@ -265,61 +267,78 @@ void Application::show_interface()
         {
             {
                 static int dim = TERRAIN_INIT_SIZE;
+                static bool autoUpdate = false;
                 float tileScale = terrain->tileScale();
                 float heightScale = terrain->heightScale();
 
-                // Dimensions
                 // TODO ? with  [vertices^2]
-                if (ImGui::SliderInt("Terrain size", &dim, 4, 512))
+                ImGui::SliderInt("Terrain size", &dim, 4, 512);
+                ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 10.f);
+                ImGui::SliderFloat("Height scale", &heightScale, 0.01f, 10.f);
+                
+                if (ImGui::Button("Generate"))
+                {
                     terrain->setSize(dim, dim);
-                if (ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 10.f))
                     terrain->setTileScale(tileScale);
-                if (ImGui::SliderFloat("Height scale", &heightScale, 0.01f, 10.f))
                     terrain->setHeightScale(heightScale);
+                }
+                else if (autoUpdate)
+                {
+                    terrain->setSize(dim, dim);
+                    terrain->setTileScale(tileScale);
+                    terrain->setHeightScale(heightScale);
+                }
+                ImGui::SameLine();
+                ImGui::Checkbox("Auto", &autoUpdate);
             }
             ImGui::Separator();
             if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 static ProceduralTex2D& noiseMap = terrain->heightMap();
+                static bool autoUpdate = false;
                 int32_t seed = noiseMap.seed();
+                float scale = noiseMap.scale();
+
                 if (ImGui::DragInt("Seed", &seed))
                     noiseMap.reseed(seed);
-                float scale = noiseMap.scale();
-                if (ImGui::SliderFloat("Scale", &scale, 0.f, 1.f))
+                if (ImGui::DragFloat("Scale", &scale, 0.001f, 0.f, 100.f))
                     noiseMap.setScale(scale);
-                    
+
                 // Select noise function
+                ImGui::NewLine();
+                const char* items[] = { "Random", "Perlin", "Accumulated Perlin"};
                 static int noiseType = noiseMap.type();
-                ImGui::RadioButton("Random Noise", &noiseType, Noise::Random); 
-                    //ImGui::SameLine();
-                ImGui::RadioButton("Perlin Noise", &noiseType, Noise::Perlin2D);
-                ImGui::RadioButton("Accumulated Perlin Noise", &noiseType, 
-                                   Noise::OctavesPerlin2D);
+                ImGui::Combo("Noise function", &noiseType, items, IM_ARRAYSIZE(items));
 
                 if (noiseType == Noise::OctavesPerlin2D)
                 {
                     int32_t octaves = noiseMap.octaves();
                     float persistence = noiseMap.persistence();
+                    float lacunarity = noiseMap.lacunarity();
                     // TODO (?)
-                    if (ImGui::SliderInt("Octaves", &octaves, 1, 10))
+                    if (ImGui::SliderInt("Octaves", &octaves, 1, 32))
                         noiseMap.setOctaves(octaves);
-                    if (ImGui::SliderFloat("Persistence", &persistence, 0.f, 1.f))
+                    if (ImGui::DragFloat("Persistence", &persistence, 0.01f, 0.f, 1.f))
                         noiseMap.setPersistence(persistence);
+                    if (ImGui::DragFloat("Lacunarity", &lacunarity, 0.1f, 1.f, 100.f))
+                        noiseMap.setLacunarity(lacunarity);
                 }
 
                 noiseMap.setType(static_cast<Noise::Type>(noiseType));
 
-                // TODO function
                 // Visualize the procedural texture
+                // TODO function
+                // zoomOnHover
                 {
                     static ImTextureID my_tex_id = (void*)(intptr_t)(noiseMap.ID());
                     glm::uvec2 tex_size = noiseMap.size();
 
-                    const float my_tex_w = 128;
-                    const float my_tex_h = 128;
+                    const float my_tex_w = 156;
+                    const float my_tex_h = 156;
 
                     ImGui::BeginGroup();
                         ImGui::Text("%u x %u", tex_size.x, tex_size.y);
+                        HelpMarker("Same size as the terrain");
                         ImVec2 pos = ImGui::GetCursorScreenPos();
                         ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
                         ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
@@ -354,10 +373,14 @@ void Application::show_interface()
                         }
                     ImGui::EndGroup();
                 }
-                if (ImGui::Button("Apply"))
-                {
+                // TODO (?)
+                if (ImGui::Button("  Apply  "))
                     terrain->applyNoiseMap();
-                }
+                else if (autoUpdate)
+                    terrain->applyNoiseMap();
+
+                ImGui::SameLine();
+                ImGui::Checkbox("Auto", &autoUpdate);
                 ImGui::TreePop();
             }
             ImGui::Separator();
@@ -367,27 +390,46 @@ void Application::show_interface()
                 static int use_type = 0;
                 const uint8_t TERR_COLORS = 0;
                 const uint8_t TERR_TEXTURES = 1;
-                ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); ImGui::SameLine();
+                ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); 
+                HelpMarker("Click on the colored square to open a color picker.\n"
+                               "Click and hold to use drag and drop.\n"
+                               "Right-click on the colored square to show options.\n"
+                               "CTRL+click on individual component to input value.\n");
+                ImGui::SameLine();
                 ImGui::RadioButton("Use textures", &use_type, TERR_TEXTURES);
 
                 // Terrain Colors
                 if (use_type == TERR_COLORS)
                 {
-                    static glm::vec3 color1(1.0f);
-                    static glm::vec3 color2(1.0f);
-                    static glm::vec3 color3(1.0f);
-                    ImGui::ColorEdit3("Color 1", glm::value_ptr(color1)); ImGui::SameLine(); 
-                    HelpMarker("Click on the colored square to open a color picker.\n"
-                               "Click and hold to use drag and drop.\n"
-                               "Right-click on the colored square to show options.\n"
-                               "CTRL+click on individual component to input value.\n");
-                    ImGui::ColorEdit3("Color 2", glm::value_ptr(color2));
-                    ImGui::ColorEdit3("Color 3", glm::value_ptr(color3));
+                    static std::vector<Terrain::Region>& regions = terrain->regions();
+                    std::string elemName;
+
+                    ImGui::Text("Name               Height            Color");
+                    ImGui::Separator();
+                    
+                    // Show color regions
+                    ImGui::PushItemWidth(122);
+                    for (uint32_t i = 0; i < regions.size(); ++i)
+                    {
+                        Terrain::Region& r = regions[i];
+                        elemName = "##";
+                        elemName += std::to_string(i);
+                        ImGui::InputText(elemName.c_str(), r.name.data(), 16);
+                        ImGui::SameLine();
+                        elemName += std::to_string(i);
+                        ImGui::InputFloat(elemName.c_str(), &r.toHeight, 0.01f, 1.0f);
+                        ImGui::SameLine();
+                        elemName += std::to_string(i);
+                        ImGui::ColorEdit3(elemName.c_str(), (float*)&r.color, 
+                                          ImGuiColorEditFlags_NoInputs | 
+                                          ImGuiColorEditFlags_NoLabel);
+                        ImGui::Separator();
+                    }
+                    ImGui::PopItemWidth();
                 }
                 // Textures
                 else if (use_type == TERR_TEXTURES)
                 {
-                    // TODO read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
                     // TODO scale icons
                     ImGuiIO& io = ImGui::GetIO();
                     ImGui::TextWrapped("Hello, below are images of textures");

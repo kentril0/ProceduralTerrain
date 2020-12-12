@@ -15,8 +15,15 @@ Terrain::Terrain(uint32_t x, uint32_t y,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
-  m_heightMap(x)
+  m_heightMap(x),
+  m_surface(true)
 {
+    m_surface.set_internal_format(GL_RGB8);
+    m_surface.set_image_format(GL_RGB);
+    m_surface.set_clamp_to_edge();
+    m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
+
+    initRegions();
     generate();
 }
 
@@ -28,8 +35,15 @@ Terrain::Terrain(const glm::uvec2& size,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
-  m_heightMap(size.x)
+  m_heightMap(size.x),
+  m_surface(true)
 {
+    m_surface.set_internal_format(GL_RGB8);
+    m_surface.set_image_format(GL_RGB);
+    m_surface.set_clamp_to_edge();
+    m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
+
+    initRegions();
     generate();
 }
 
@@ -85,7 +99,8 @@ void Terrain::generate()
             m_texCoords[index] = glm::vec2(S, T);
             m_vertices[index] = glm::vec3(X, Y, Z);
 
-            m_colors[index] = glm::vec4(1.0f);
+            // TODO height-based texturing
+            m_colors[index] = regionColorIn(heightValue);
         }
 
     // ---------------------------------------------------------------- 
@@ -94,6 +109,8 @@ void Terrain::generate()
     generateNormals();
 
     generateBuffers();
+    m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
+
     LOG_OK("Terrain has been loaded!");
 
     // TODO
@@ -185,20 +202,20 @@ void Terrain::generateBuffers()
     m_vboTexels = std::make_shared<VertexBuffer>(
         m_texCoords.size() * sizeof(glm::vec2), m_texCoords.data());
 
-    m_vboColors = std::make_shared<VertexBuffer>(
-        m_colors.size() * sizeof(glm::vec4), m_colors.data());
+    //m_vboColors = std::make_shared<VertexBuffer>(
+    //    m_colors.size() * sizeof(glm::vec3), m_colors.data());
 
     std::shared_ptr ibo = std::make_shared<IndexBuffer>(m_indices.size(), m_indices.data());
 
     m_vboVertices->set_layout(BufferLayout({{ElementType::Float3, "Position"}}));
     m_vboNormals->set_layout(BufferLayout({{ElementType::Float3, "Normal"}}));
     m_vboTexels->set_layout(BufferLayout({{ElementType::Float2, "TexCoords"}}));
-    m_vboColors->set_layout(BufferLayout({{ElementType::Float4, "Color"}}));
+    //m_vboColors->set_layout(BufferLayout({{ElementType::Float3, "Color"}}));
 
     m_vao.add_vertex_buffer(m_vboVertices);
     m_vao.add_vertex_buffer(m_vboNormals);
     m_vao.add_vertex_buffer(m_vboTexels);
-    m_vao.add_vertex_buffer(m_vboColors);
+    //m_vao.add_vertex_buffer(m_vboColors);
     m_vao.set_index_buffer(ibo);
 }
 
@@ -244,7 +261,7 @@ void Terrain::render() const
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    //glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0);
     //glActiveTexture(GL_TEXTURE1);
     //glActiveTexture(GL_TEXTURE2);
     //tex1->bind();
@@ -252,11 +269,12 @@ void Terrain::render() const
     ///tex2->bind_unit(1);
     ///tex3->bind_unit(2);
 
+    m_surface.bind();
     m_vao.bind();
 
     // Rendering using indexed element arrays
     //glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-    glDrawElements(GL_TRIANGLE_STRIP, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
 }
 
 
@@ -340,6 +358,25 @@ float Terrain::heightAt(const glm::vec3& position) const
     return height;
 }
 
+void Terrain::regenerate(const glm::uvec2& newSize)
+{
+    if (newSize == m_size)
+        return;
+
+    m_size = newSize;
+
+    // TODO better
+    m_vao.unbind();
+    m_vao.clear();
+    //m_vertices.clear();
+    //m_normals.clear();
+    //m_texCoords.clear();
+    //m_colors.clear();
+    //m_indices.clear();
+    m_heightMap.setSize(m_size.x);
+    generate();
+}
+
 void Terrain::onTileScaleChanged(float newScale)
 {
     newScale = std::max(newScale, 0.01f);
@@ -408,3 +445,31 @@ void Terrain::onNoiseChanged()
     updateVerticesBuffer();
     updateNormalsBuffer();
 }
+
+void Terrain::initRegions()
+{
+    m_regions = {
+        Region("Water Deep",    0.3f,  glm::vec3(0.f, 0.f, 0.8f)),
+        Region("Water Shallow", 0.4f,  glm::vec3(54 / 255.f, 103 / 255.f, 199 / 255.f)),
+        Region("Sand",          0.45f, glm::vec3(210 / 255.f, 208 / 255.f, 125 / 255.f)),
+        Region("Grass",         0.55f, glm::vec3(86 / 255.f, 152 / 255.f, 23 / 255.f)),
+        Region("Trees",         0.6f,  glm::vec3(62 / 255.f, 107 / 255.f, 18 / 255.f)),
+        Region("Rock",          0.7f,  glm::vec3(90 / 255.f, 69 / 255.f, 60 / 255.f)),
+        Region("Higher Rock",   0.9f,  glm::vec3(75 / 255.f, 60 / 255.f, 53 / 255.f)),
+        Region("Snow",          1.0f,  glm::vec3(1.f, 1.f, 1.0f)),
+    };
+}
+
+glm::vec3 Terrain::regionColorIn(float heightValue) const
+{
+    for (const Region& r : m_regions)
+    {
+        if (r.toHeight >= heightValue)
+            return r.color;
+    }
+    if (m_regions.size())
+        return m_regions.back().color;
+    else
+        return glm::vec3(1.f, 1.f, 1.f);
+}
+
