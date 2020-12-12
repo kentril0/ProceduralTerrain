@@ -215,8 +215,7 @@ void Application::show_interface()
     if (state == STATE_MODIFY)
     {
         // TODO fix on rescale
-        ImGui::ShowDemoWindow(NULL);
-
+        //ImGui::ShowDemoWindow(NULL);
 
         if (!ImGui::Begin("Application Controls", NULL))
         {
@@ -327,52 +326,10 @@ void Application::show_interface()
                 noiseMap.setType(static_cast<Noise::Type>(noiseType));
 
                 // Visualize the procedural texture
-                // TODO function
-                // zoomOnHover
-                {
-                    static ImTextureID my_tex_id = (void*)(intptr_t)(noiseMap.ID());
-                    glm::uvec2 tex_size = noiseMap.size();
+                const float texW = 156;
+                const float texH = 156;
+                showTexture(noiseMap.ID(), noiseMap.size(), texW, texH);
 
-                    const float my_tex_w = 156;
-                    const float my_tex_h = 156;
-
-                    ImGui::BeginGroup();
-                        ImGui::Text("%u x %u", tex_size.x, tex_size.y);
-                        HelpMarker("Same size as the terrain");
-                        ImVec2 pos = ImGui::GetCursorScreenPos();
-                        ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-                        ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-                        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-                        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
-                        ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, 
-                                     uv_max, tint_col, border_col);
-                        if (ImGui::IsItemHovered())
-                        {
-                            ImGuiIO& io = ImGui::GetIO();
-                            ImGui::BeginTooltip();
-                            float region_sz = 32.0f;
-                            float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
-                            float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
-                            float zoom = 4.0f;
-                            if (region_x < 0.0f) { region_x = 0.0f; }
-                            else if (region_x > my_tex_w - region_sz) { 
-                                region_x = my_tex_w - region_sz; }
-                            if (region_y < 0.0f) { region_y = 0.0f; }
-                            else if (region_y > my_tex_h - region_sz) {
-                                region_y = my_tex_h - region_sz; }
-                            ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
-                            ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
-                                                             region_y + region_sz);
-                            ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
-                            ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, 
-                                                (region_y + region_sz) / my_tex_h);
-                            ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, 
-                                                           region_sz * zoom), 
-                                         uv0, uv1, tint_col, border_col);
-                            ImGui::EndTooltip();
-                        }
-                    ImGui::EndGroup();
-                }
                 // TODO (?)
                 if (ImGui::Button("  Apply  "))
                     terrain->applyNoiseMap();
@@ -431,61 +388,16 @@ void Application::show_interface()
                 else if (use_type == TERR_TEXTURES)
                 {
                     // TODO scale icons
-                    ImGuiIO& io = ImGui::GetIO();
                     ImGui::TextWrapped("Hello, below are images of textures");
-                    //ImTextureID my_tex_id = io.Fonts->TexID;
-                    //float my_tex_w = 96;
-                    //float my_tex_h = 96;
                     
-                    //ImTextureID my_tex_id = &((void)(terrain->heightMap().ID()));
-                    uint32_t tex_id = terrain->heightMap().ID();
-                    glm::uvec2 tex_size = terrain->heightMap().size();
-
-                    //glBindTexture(GL_TEXTURE_2D, my_tex_id);
-                    ImTextureID my_tex_id = (void*)(intptr_t)tex_id;
-                    
-                    float my_tex_w = 96;
-                    float my_tex_h = 96;
+                    const float texW = 96;
+                    const float texH = 96;
 
                     for (int i = 0; i < 3; ++i)
                     {
-                      if (i > 0)
-                        ImGui::SameLine();
-
-                      ImGui::BeginGroup();
-                        ImGui::Text("%u x %u", tex_size.x, tex_size.y);
-                        ImVec2 pos = ImGui::GetCursorScreenPos();
-                        ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-                        ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-                        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-                        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
-                        ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), uv_min, 
-                                     uv_max, tint_col, border_col);
-                        if (ImGui::IsItemHovered())
-                        {
-                            ImGui::BeginTooltip();
-                            float region_sz = 32.0f;
-                            float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
-                            float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
-                            float zoom = 4.0f;
-                            if (region_x < 0.0f) { region_x = 0.0f; }
-                            else if (region_x > my_tex_w - region_sz) { 
-                                region_x = my_tex_w - region_sz; }
-                            if (region_y < 0.0f) { region_y = 0.0f; }
-                            else if (region_y > my_tex_h - region_sz) {
-                                region_y = my_tex_h - region_sz; }
-                            ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
-                            ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
-                                                             region_y + region_sz);
-                            ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
-                            ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, 
-                                                (region_y + region_sz) / my_tex_h);
-                            ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, 
-                                                           region_sz * zoom), 
-                                         uv0, uv1, tint_col, border_col);
-                            ImGui::EndTooltip();
-                        }
-                      ImGui::EndGroup();
+                      if (i > 0) { ImGui::SameLine(); }
+                      showTexture(terrain->heightMap().ID(), terrain->heightMap().size(), 
+                                  texW, texH);
                     }
                 }
             // Slope controls
@@ -573,3 +485,45 @@ void Application::set_vsync(bool enabled)
         glfwSwapInterval(0);
 }
 
+
+void Application::showTexture(uint32_t texture_id, const glm::uvec2& texSize, 
+                              const float w, const float h)
+{
+    ImTextureID tex_id = (void*)(intptr_t)texture_id;
+    ImGui::BeginGroup();
+        ImGui::Text("%u x %u", texSize.x, texSize.y);
+        HelpMarker("Same size as the terrain");
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+        ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+        ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+        ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+        ImGui::Image(tex_id, ImVec2(w, h), uv_min, 
+                     uv_max, tint_col, border_col);
+        if (ImGui::IsItemHovered())
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            ImGui::BeginTooltip();
+            float region_sz = 32.0f;
+            float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
+            float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
+            float zoom = 4.0f;
+            if (region_x < 0.0f) { region_x = 0.0f; }
+            else if (region_x > w - region_sz) { 
+                region_x = w - region_sz; }
+            if (region_y < 0.0f) { region_y = 0.0f; }
+            else if (region_y > h - region_sz) {
+                region_y = h - region_sz; }
+            ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y);
+            ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, 
+                                             region_y + region_sz);
+            ImVec2 uv0 = ImVec2((region_x) / w, (region_y) / h);
+            ImVec2 uv1 = ImVec2((region_x + region_sz) / w, 
+                                (region_y + region_sz) / h);
+            ImGui::Image(tex_id, ImVec2(region_sz * zoom, 
+                                           region_sz * zoom), 
+                         uv0, uv1, tint_col, border_col);
+            ImGui::EndTooltip();
+        }
+    ImGui::EndGroup();
+}

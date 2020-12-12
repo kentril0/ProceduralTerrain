@@ -75,6 +75,9 @@ private:
 
     void status_window();
 
+    void showTexture(uint32_t texture_id, const glm::uvec2& texSize,
+                     const float w, const float h);
+
     // Camera callbacks
     void camera_key_pressed() { camera->on_key_pressed(key, key_action); }
     void camera_forward()     { camera->key_forward(key_action); }
