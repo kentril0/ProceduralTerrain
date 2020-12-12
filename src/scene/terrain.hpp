@@ -35,6 +35,9 @@ public:
      */
     void addShader(const std::shared_ptr<Shader>& sh);
 
+    // TODO ONLY RGB TEXTURES - JPGs
+    void loadTexture(const char* name);
+
     //~Terrain();
 
     //@param projView Projection view matrix 
@@ -71,9 +74,9 @@ public:
     void onRegionsChanged();
 
     // For surface texture
-    void setFilteringPoint() { m_surface.set_filtering(GL_NEAREST, GL_NEAREST); }
+    void setFilteringPoint();
 
-    void setFilteringLinear() { m_surface.set_linear_filtering(); }
+    void setFilteringLinear();
 
     void enableFalloffMap(bool f)
     {
@@ -83,10 +86,14 @@ public:
         m_useFalloff = f;
     }
 
-    // TODO unused
-    void setTexture(
-        unsigned stage = 0
-    );
+    void setBlending(bool b)
+    {
+        m_blending = b;
+        m_falloffChanged = true;    // exploit a little bit
+        regenerate(m_size);
+    }
+
+    void setScaleFactor(float scaleFactor) { m_scaleFactor = scaleFactor; }
 
     // ------------------------------------------------------------------------
     // Getters
@@ -127,6 +134,9 @@ public:
 
     std::vector<Region>& regions() { return m_regions; }
 
+    const std::vector<Texture2D>& textures() const { return guiTextures; }
+
+    float getScaleFactor() const { return m_scaleFactor; }
 
 private:    
     void init();
@@ -188,25 +198,30 @@ private:
 
     //------------------------------------------------------------
     // Height-based texturing - colored / textured regions based on height
-    bool m_blending = true;
+    bool m_blending = false;
+    bool m_usingColors = true;
     
     std::vector<Region> m_regions;
 
     struct ImageInfo                      ///< For Surface textures
     {
-        const void* data;                 ///< Expects RGB values with opacity Channel
+        const uint8_t* data;                 ///< Expects RGB values with opacity Channel
         uint32_t width;
         uint32_t height;
+        ImageInfo(const uint8_t* img, uint32_t w, uint32_t h)
+          : data(img), width(w), height(h) {}
     };
     std::vector<ImageInfo> m_images;      ///< For Multitexturing
+    std::vector<Texture2D> guiTextures;     ///< For visualization
+    float m_scaleFactor;                    ///< Texture scaling factor
     Texture2D m_surface;                  ///< Final surface texture
 
     // Arrays of 2D textures
-    uint32_t m_colorTextures;             ///< Solid colors as textures
+    //uint32_t m_colorTextures;             ///< Solid colors as textures
+    //uint32_t m_arrayTextures;             
+    uint32_t m_textureArray;                
+    uint32_t m_opacityMap;             
     std::vector<std::vector<glm::vec4>> m_colors;
-
-    //uint32_t m_textures;
-    //uint32_t m_opacityMaps;
 
     void initColorTextureArray();
     void fillColorTextureArray();
@@ -230,7 +245,6 @@ private:
     {
         return pow(v,fade_a) / (pow(v,fade_a) + pow((fade_b - fade_b * v), fade_a));
     }
-
 
 };
 

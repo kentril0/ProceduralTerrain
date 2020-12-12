@@ -29,38 +29,6 @@ Texture2D::Texture2D(const std::string& filename, bool alpha, bool mps)
     load(filename, alpha);
 }
 
-Texture2D::Texture2D(const uint8_t* data, uint32_t w, uint32_t h, bool alpha, bool mps)
-    : m_width(w), 
-      m_height(h), 
-      m_internal_format(GL_RGBA8),
-      m_image_format(alpha ? GL_RGBA : GL_RGB),
-      m_mipmaps(mps),
-      m_filterMin(GL_LINEAR_MIPMAP_LINEAR),
-      m_filterMag(GL_LINEAR)
-{
-    DERR("Texture def CONSTR");
-    glCreateTextures(GL_TEXTURE_2D, 1, &id);
-
-    // Specify IMMUTABLE storage for all levels of a 2D array texture
-    //  Create texture with log2 of width levels
-    glTextureStorage2D(id,
-                       (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
-                       m_internal_format,           // sized format of stored data *RGBA8
-                       m_width, m_height);          // in texels
-
-    // Specify a 2D texture subimage
-    glTextureSubImage2D(id,                 // texture id
-                        0,                  // level
-                        0, 0,               // xoffset, yoffset in the texture array
-                        m_width, m_height,  // width, height of the subimage
-                        m_image_format,     // format of the pixel data *RED, RGB, RGBA
-                        GL_UNSIGNED_BYTE,   // data type of the pixel data, *BYTE, FLOAT, INT
-                        data);              // A pointer to the image data in memory
-    // Generate Mipmaps
-    if (m_mipmaps)
-    	gen_mipmap();
-}
-
 Texture2D::~Texture2D()
 {
     DERR("Texture def DESTR");
@@ -105,7 +73,6 @@ void Texture2D::upload(const uint8_t* data, int w, int h)
     m_width = w;
     m_height = h;
 
-    // TODO opengl 4.5
     bind();
     // Specify storage for all levels of a 2D array texture
     glTexImage2D(GL_TEXTURE_2D,         // texture type

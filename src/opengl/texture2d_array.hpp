@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <string>
+#include "texture2D.hpp"
 
 
 class Texture2D
@@ -16,11 +15,6 @@ public:
 	Texture2D(bool mipmaps = true);
 
 	Texture2D(const std::string& filename, 
-			  bool alpha = true, 
-			  bool mipmaps = true); 
-
-	Texture2D(const uint8_t* data, 
-              uint32_t w, uint32_t h,
 			  bool alpha = true, 
 			  bool mipmaps = true); 
 

@@ -1,7 +1,6 @@
 #include "pch.hpp"
 #include "application.hpp"
 
-
 // --------------------------------------------------------------------------
 // Static variables
 // --------------------------------------------------------------------------
@@ -37,16 +36,26 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
                                        "images/skybox/front.jpg",
                                        "images/skybox/back.jpg"});
 
-    std::shared_ptr<Shader> sh_terrain = std::make_shared<Shader>(
+    std::shared_ptr<Shader> shTerSingle = std::make_shared<Shader>(
                                           "shaders/draw_terrain.vs",
                                           "shaders/draw_terrain.fs");
-    terrain = std::make_unique<Terrain>(sh_terrain,
-                                        TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
+    std::shared_ptr<Shader> shTerMulti = std::make_shared<Shader>(
+                                          "shaders/terrain_multitex.vs",
+                                          "shaders/terrain_multitex.fs");
+    terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
                                         0.2f, 2.f);
-      // TODO
-      //std::make_shared<Texture2D>("images/farmland.jpg", false),
-      //std::make_shared<Texture2D>("images/Grass0130_seamless.jpg", false),
-      //std::make_shared<Texture2D>("images/Snow0163_seamless.jpg", false));
+    terrain->addShader(shTerSingle);
+    terrain->addShader(shTerMulti);
+
+    // Load textures
+    terrain->loadTexture("images/waterDeep.jpg");
+    terrain->loadTexture("images/water.jpg");
+    terrain->loadTexture("images/sand.jpg");
+    terrain->loadTexture("images/grass.jpg");
+    terrain->loadTexture("images/trees.jpg");
+    terrain->loadTexture("images/rocks.jpg");
+    terrain->loadTexture("images/rocksHigh.jpg");
+    terrain->loadTexture("images/snow.jpg");
 
     // --------------------------------------------------------------------------
     // Register callbacks
@@ -364,12 +373,18 @@ void Application::show_interface()
 
                 static int use_type = 0;
                 static int filterType = 0;
+                static bool usingBlending = false;
                 const uint8_t TERR_COLORS = 0;
                 const uint8_t TERR_TEXTURES = 1;
                 const char* items[] = { "Nearest", "Linear" };
+                float scaleFactor = terrain->getScaleFactor();
 
-                // Select Filtering
                 ImGui::NewLine();
+                if (ImGui::Checkbox(" Blending (height-based)", &usingBlending))
+                {
+                    terrain->setBlending(usingBlending);
+                }
+                // Select Filtering
                 if (ImGui::Combo("Filtering", &filterType, items, IM_ARRAYSIZE(items)))
                 {
                     if (filterType == 0)
@@ -377,6 +392,12 @@ void Application::show_interface()
                     else if (filterType == 1)
                         terrain->setFilteringLinear();
                 }
+                ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - 90);
+                if (ImGui::DragFloat("Texture scale", &scaleFactor, 0.01f, 0.1f, 16.f))
+                    terrain->setScaleFactor(scaleFactor);
+                ImGui::SameLine();
+                if (ImGui::Button("Default"))
+                    terrain->setScaleFactor(1.0f);
 
                 // Select type of texturing
                 ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); 
@@ -439,17 +460,8 @@ void Application::show_interface()
             // Slope controls
                 ImGui::TreePop();
             }
-            
-
-            
-            
-
-            // TODO noise functions
-            //  Each texture has a range, 2 - 512
-            //      if last res != res: update
-            //
         }
-
+        /*
         if (ImGui::CollapsingHeader("Sky effects"))
         {
             static glm::vec3 light_col(1.0f);
@@ -460,7 +472,7 @@ void Application::show_interface()
             ImGui::ColorEdit3("Fog color", glm::value_ptr(fog_col));
             ImGui::SliderFloat("Fog falloff dist", &fog_falloff, 1.f, 1000.f);
         }
-
+        */
         ImGui::End();
     }
 
