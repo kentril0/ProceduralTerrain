@@ -149,25 +149,24 @@ private:
 
     int state;
 
-
-    bool m_wireframe = false;
     // ----------------------------------------------------------------------------
     // Scene
     // TODO scene objects, scene shaders, etc.
     // TODO resource manager?
     // TODO active camera, walk camera
     // ----------------------------------------------------------------------------
+    glm::mat4 projView;
+
     std::unique_ptr<Camera> camera;
     void cameraSetPresetTop();
     void cameraSetPresetFront();
     void cameraSetPresetSideWays();
 
-    std::shared_ptr<Shader> sh_skybox;
     std::unique_ptr<Skybox> skybox;
 
-    std::unique_ptr<Shader> sh_terrain;
     std::unique_ptr<Terrain> terrain;
     const uint32_t TERRAIN_INIT_SIZE = 100;
+    bool m_wireframe = false;
 
     
 

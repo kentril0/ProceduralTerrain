@@ -1,5 +1,6 @@
 #pragma once
 
+#include "opengl/shader.hpp"
 #include "opengl/texture2d.hpp"
 #include "opengl/vertex_array.hpp"
 #include "opengl/proc_texture2d.hpp"
@@ -14,6 +15,7 @@ public:
     /**
      * @brief Sets up buffers and textures for subsequent
      *        rendering. Terrain will be set in (0,0,0) origin
+     * @param sh Terrain shader
      * @param x Size in x dimension
      * @param z Size in z dimension
      * @param tileScale Scaling factor of X and Z coord.
@@ -21,17 +23,20 @@ public:
      * @param heightScale Scaling factor of Y coord. - the height.
      * @param model Model matrix of the terrain
      */
-    Terrain(uint32_t x, uint32_t z,
+    Terrain(const std::shared_ptr<Shader>& sh,
+            uint32_t x, uint32_t z,
             float tileScale = 1.0f, float heightScale = 1.0f,
             const glm::mat4& model = glm::mat4(1.0f));
 
-    Terrain(const glm::uvec2& size,
+    Terrain(const std::shared_ptr<Shader>& sh,
+            const glm::uvec2& size,
             float tileScale = 1.0f, float heightScale = 1.0f,
             const glm::mat4& model = glm::mat4(1.0f));
 
     //~Terrain();
 
-    void render() const;
+    //@param projView Projection view matrix 
+    void render(const glm::mat4& projView) const;
 
     /**
      * @brief Gets the height of the terrain at a particular point in the world space.
@@ -168,15 +173,20 @@ private:
     std::shared_ptr<VertexBuffer> m_vboTexels;
     //std::shared_ptr<VertexBuffer> m_vboColors;
 
+    // Shader, shared_ptr for probable future extensibility
+    std::shared_ptr<Shader> shader;
+
     ProceduralTex2D m_heightMap;          ///< Procedurally generated height map
 
+    //------------------------------------------------------------
     // Height-based texturing - colored / textured regions based on height
     std::vector<Region> m_regions;
 
-
-    std::vector<std::shared_ptr<Texture2D>> m_textures;    ///< Surface textures
+    //std::vector<std::shared_ptr<Texture2D>> m_textures;    ///< Surface textures
     Texture2D m_surface;                  ///< Final surface texture
 
+
+    //------------------------------------------------------------
     // Falloff map
     bool m_useFalloff;
     bool m_falloffChanged = false;
@@ -184,12 +194,15 @@ private:
 
     void generateFalloffMap();
 
+    // Lague, Sebastian. Procedural Landmass Generation (E11: falloff map).
+    // [online]. Available at: https://www.youtube.com/watch?v=COmtTyLCd6I
     const float fade_a = 3.f;
     const float fade_b = 2.2f;
     constexpr float fade(float v) const
     {
         return pow(v,fade_a) / (pow(v,fade_a) + pow((fade_b - fade_b * v), fade_a));
     }
+
 
 };
 

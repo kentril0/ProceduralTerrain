@@ -12,9 +12,7 @@ layout(location = 2) in vec2 tex;
 layout(location = 0) out vec2 fsTex;
 //layout(location = 3) out vec4 fs_color;
 
-uniform mat4 proj;
-uniform mat4 view;
-uniform mat4 model;
+uniform mat4 MVP;
 
 void main()
 {
@@ -23,6 +21,6 @@ void main()
 	fsTex = tex;
     //fs_color = color;
 
-    gl_Position = proj * view * model * vec4(position, 1.0);
+    gl_Position = MVP * vec4(position, 1.0);
 }
 

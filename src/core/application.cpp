@@ -25,9 +25,9 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     camera = std::make_unique<Camera>(float(width) / float(height));
     cameraSetPresetSideWays();
     
-    sh_skybox = std::make_shared<Shader>("shaders/draw_skybox.vs", 
+    std::shared_ptr<Shader> sh_skybox = std::make_shared<Shader>(
+                                         "shaders/draw_skybox.vs", 
                                          "shaders/draw_skybox.fs");
-
     skybox = std::make_unique<Skybox>(sh_skybox, 
                                       std::initializer_list<const char*>{
                                        "images/skybox/right.jpg",
@@ -37,10 +37,11 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
                                        "images/skybox/front.jpg",
                                        "images/skybox/back.jpg"});
 
-    sh_terrain = std::make_unique<Shader>("shaders/draw_terrain.vs",
+    std::shared_ptr<Shader> sh_terrain = std::make_shared<Shader>(
+                                          "shaders/draw_terrain.vs",
                                           "shaders/draw_terrain.fs");
-    // TODO local
-    terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
+    terrain = std::make_unique<Terrain>(sh_terrain,
+                                        TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
                                         0.2f, 2.f);
       // TODO
       //std::make_shared<Texture2D>("images/farmland.jpg", false),
@@ -137,19 +138,13 @@ void Application::render()
     // Get projection and view matrices defined by camera
     glm::mat4 proj = camera->get_proj_matrix();
     glm::mat4 view = camera->get_view_matrix();
+    projView = proj * view;
 
-    // TODO put into terrain
-    // TODO MVP matrix
     // Render the terrain
-    sh_terrain->use();
-    sh_terrain->set_mat4("model", terrain->model());
-    sh_terrain->set_mat4("view", view);
-    sh_terrain->set_mat4("proj", proj);
-
     if (m_wireframe)
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-    terrain->render();
+    terrain->render(projView);
 
     if (m_wireframe)
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );

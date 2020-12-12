@@ -8,7 +8,8 @@
 
 //#define DEBUG_STRIP
 
-Terrain::Terrain(uint32_t x, uint32_t y,
+Terrain::Terrain(const std::shared_ptr<Shader>& sh,
+                 uint32_t x, uint32_t y,
                  float tileScale, float heightScale,
                  const glm::mat4& model)
 : m_size(x, y),
@@ -16,6 +17,7 @@ Terrain::Terrain(uint32_t x, uint32_t y,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
+  shader(sh),
   m_heightMap(x),
   m_surface(true),
   m_useFalloff(true)
@@ -30,7 +32,8 @@ Terrain::Terrain(uint32_t x, uint32_t y,
     generate();
 }
 
-Terrain::Terrain(const glm::uvec2& size,
+Terrain::Terrain(const std::shared_ptr<Shader>& sh,
+                 const glm::uvec2& size,
                  float tileScale, float heightScale,
                  const glm::mat4& model)
 : m_size(size.x, size.y),
@@ -38,6 +41,7 @@ Terrain::Terrain(const glm::uvec2& size,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
+  shader(sh),
   m_heightMap(size.x),
   m_surface(true),
   m_useFalloff(true)
@@ -290,12 +294,15 @@ void Terrain::setTexture(unsigned stage)
 }
 
 
-void Terrain::render() const
+void Terrain::render(const glm::mat4& projView) const
 {
     // Disable lighting because it changes the primary color of the vertices that are
     // used for the multitexture blending.
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    shader->use();
+    shader->set_mat4("MVP", projView * m_model);
 
     glActiveTexture(GL_TEXTURE0);
     //glActiveTexture(GL_TEXTURE1);
@@ -304,6 +311,7 @@ void Terrain::render() const
     //tex1->bind_unit(0);
     ///tex2->bind_unit(1);
     ///tex3->bind_unit(2);
+
 
     m_surface.bind();
     m_vao.bind();
