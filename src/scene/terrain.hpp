@@ -15,7 +15,6 @@ public:
     /**
      * @brief Sets up buffers and textures for subsequent
      *        rendering. Terrain will be set in (0,0,0) origin
-     * @param sh Terrain shader
      * @param x Size in x dimension
      * @param z Size in z dimension
      * @param tileScale Scaling factor of X and Z coord.
@@ -23,15 +22,18 @@ public:
      * @param heightScale Scaling factor of Y coord. - the height.
      * @param model Model matrix of the terrain
      */
-    Terrain(const std::shared_ptr<Shader>& sh,
-            uint32_t x, uint32_t z,
+    Terrain(uint32_t x, uint32_t z,
             float tileScale = 1.0f, float heightScale = 1.0f,
             const glm::mat4& model = glm::mat4(1.0f));
 
-    Terrain(const std::shared_ptr<Shader>& sh,
-            const glm::uvec2& size,
+    Terrain(const glm::uvec2& size,
             float tileScale = 1.0f, float heightScale = 1.0f,
             const glm::mat4& model = glm::mat4(1.0f));
+
+    /** @brief 1st shader added is for single texturing
+     *         2nd is for multi texturing
+     */
+    void addShader(const std::shared_ptr<Shader>& sh);
 
     //~Terrain();
 
@@ -103,18 +105,22 @@ public:
 
     uint32_t totalIndices() const { return m_indices.size(); }
 
+#ifndef TRIANGLE_STRIP
+    uint32_t totalTriangles() const { return totalIndices() / 3; }
+#else
     uint32_t totalTriangles() const { return (m_size.x * 2 -2) * (m_size.y-1); }
+#endif
 
     // Height-based texturing
     struct Region
     {
         float toHeight;
         // TODO union Texture2D
-        glm::vec3 color;
+        glm::vec4 color;
         std::string name;
 
         Region(const char* name, float height, const glm::vec3& c)
-          : toHeight(height), color(c), name(name) {}
+          : toHeight(height), color(c, 1.0), name(name) {}
 
         void addRegion() {}
     };
@@ -123,6 +129,8 @@ public:
 
 
 private:    
+    void init();
+
     void generate();
 
     void generateIndices();
@@ -132,6 +140,7 @@ private:
     // For updating new data, of the same size
     void updateVerticesBuffer();
     void updateNormalsBuffer();
+    void updateTextures();
 
     void regenerate(const glm::uvec2& newSize);
 
@@ -143,7 +152,7 @@ private:
 
     void initRegions();
     
-    glm::vec3 regionColorIn(float height) const;
+    void regionColorIn(float height, uint32_t index);
 
     //void renderNormals();      ///< For debugging purposes
 
@@ -163,7 +172,6 @@ private:
     std::vector<glm::vec3> m_vertices;
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
-    std::vector<glm::vec3> m_colors;
     std::vector<uint32_t> m_indices;      ///< Indices of vertices
 
     // Buffers
@@ -171,20 +179,40 @@ private:
     std::shared_ptr<VertexBuffer> m_vboVertices;
     std::shared_ptr<VertexBuffer> m_vboNormals;
     std::shared_ptr<VertexBuffer> m_vboTexels;
-    //std::shared_ptr<VertexBuffer> m_vboColors;
 
     // Shader, shared_ptr for probable future extensibility
-    std::shared_ptr<Shader> shader;
+    std::shared_ptr<Shader> shSingle;       ///< Single texturing
+    std::shared_ptr<Shader> shMulti;        ///< Multi texturing
 
     ProceduralTex2D m_heightMap;          ///< Procedurally generated height map
 
     //------------------------------------------------------------
     // Height-based texturing - colored / textured regions based on height
+    bool m_blending = true;
+    
     std::vector<Region> m_regions;
 
-    //std::vector<std::shared_ptr<Texture2D>> m_textures;    ///< Surface textures
+    struct ImageInfo                      ///< For Surface textures
+    {
+        const void* data;                 ///< Expects RGB values with opacity Channel
+        uint32_t width;
+        uint32_t height;
+    };
+    std::vector<ImageInfo> m_images;      ///< For Multitexturing
     Texture2D m_surface;                  ///< Final surface texture
 
+    // Arrays of 2D textures
+    uint32_t m_colorTextures;             ///< Solid colors as textures
+    std::vector<std::vector<glm::vec4>> m_colors;
+
+    //uint32_t m_textures;
+    //uint32_t m_opacityMaps;
+
+    void initColorTextureArray();
+    void fillColorTextureArray();
+    void subColorAt(uint32_t i);
+
+    glm::uvec2 maxSizeFromImages();
 
     //------------------------------------------------------------
     // Falloff map

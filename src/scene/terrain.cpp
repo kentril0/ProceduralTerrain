@@ -8,8 +8,7 @@
 
 //#define DEBUG_STRIP
 
-Terrain::Terrain(const std::shared_ptr<Shader>& sh,
-                 uint32_t x, uint32_t y,
+Terrain::Terrain(uint32_t x, uint32_t y,
                  float tileScale, float heightScale,
                  const glm::mat4& model)
 : m_size(x, y),
@@ -17,23 +16,14 @@ Terrain::Terrain(const std::shared_ptr<Shader>& sh,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
-  shader(sh),
   m_heightMap(x),
   m_surface(true),
   m_useFalloff(true)
 {
-    m_surface.set_internal_format(GL_RGB8);
-    m_surface.set_image_format(GL_RGB);
-    m_surface.set_clamp_to_edge();
-    m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
-
-    initRegions();
-    generateFalloffMap();
-    generate();
+    init();
 }
 
-Terrain::Terrain(const std::shared_ptr<Shader>& sh,
-                 const glm::uvec2& size,
+Terrain::Terrain(const glm::uvec2& size,
                  float tileScale, float heightScale,
                  const glm::mat4& model)
 : m_size(size.x, size.y),
@@ -41,22 +31,39 @@ Terrain::Terrain(const std::shared_ptr<Shader>& sh,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
-  shader(sh),
   m_heightMap(size.x),
   m_surface(true),
   m_useFalloff(true)
 {
-    m_surface.set_internal_format(GL_RGB8);
-    m_surface.set_image_format(GL_RGB);
+    init();
+}
+
+void Terrain::init()
+{
+    m_surface.set_internal_format(GL_RGBA8);
+    m_surface.set_image_format(GL_RGBA);
     m_surface.set_clamp_to_edge();
     m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
 
+    glGenTextures(1, &m_colorTextures);
+//    glCreateTextures(1, &m_textures);
+//    glCreateTextures(2, &m_opacityMaps);
+//
     initRegions();
     generateFalloffMap();
     generate();
 }
 
-// TODO function
+void Terrain::addShader(const std::shared_ptr<Shader>& sh)
+{
+    if (shSingle == nullptr)
+        shSingle = sh;
+    else if (shMulti == nullptr)
+        shMulti = sh;
+    // TODO others
+}
+
+// TODO break into functions
 void Terrain::generate()
 {
     // Set up vertices
@@ -72,11 +79,20 @@ void Terrain::generate()
     m_vertices.resize(totalVertices);
     m_normals.resize(totalVertices);
     m_texCoords.resize(totalVertices);
-    m_colors.resize(totalVertices);
+
+    // Initialize color contributions
+    {
+        uint32_t totalColors = 1;
+        if (m_blending)
+            totalColors = m_regions.size();
+        m_colors.resize(totalColors);
+
+        for (uint32_t i = 0; i < totalColors; ++i)
+            m_colors[i].resize(totalVertices);
+    }
 
     // Calculate size of the terrain in world units
     // The dimensions in world units are [0, ..., size-1] 
-    // TODO change
     m_worldSize = glm::vec2((width  -1) * m_tileScale, 
                             (height -1) * m_tileScale);
 
@@ -110,8 +126,8 @@ void Terrain::generate()
             m_texCoords[index] = glm::vec2(S, T);
             m_vertices[index] = glm::vec3(X, Y, Z);
 
-            // TODO height-based texturing
-            m_colors[index] = regionColorIn(heightValue);
+            // TODO height-based texturing ADD BOOL or ANOTHER FUNCTION
+            regionColorIn(heightValue, index);
         }
 
     // ---------------------------------------------------------------- 
@@ -120,16 +136,22 @@ void Terrain::generate()
     generateNormals();
 
     generateBuffers();
-    m_surface.upload((float*)&m_colors[0], width, height);
+    updateTextures();
 
     LOG_OK("Terrain has been loaded!");
+}
 
-    // TODO
-    //vertices.clear();
-    //normals.clear();
-    //tex_coords.clear();
-    //colors.clear();
-    //indices.clear();
+void Terrain::updateTextures()
+{
+    if (m_blending)
+    {
+        initColorTextureArray();
+        fillColorTextureArray();
+    }
+    else
+    {
+        m_surface.upload((float*)&m_colors[0][0], m_size.x, m_size.y);
+    }
 }
 
 void Terrain::generateIndices()
@@ -138,7 +160,29 @@ void Terrain::generateIndices()
     const uint32_t height = m_size.y;
     const uint32_t realW = width  -1;
     const uint32_t realH = height -1;
+#ifndef TRIANGLE_STRIP
+    // 2 triangles for every quad of the terrain mesh
+    //  3 indices for each triangle in the terrain mesh
+    m_indices.resize(realW * realH * TRIANGLES_PER_QUAD * INDICES_PER_TRIANGLE);
 
+    uint32_t index = 0;
+    for (uint32_t j = 0; j < realH; ++j)
+    {
+        for (uint32_t i = 0; i < realW; ++i)
+        {
+            uint32_t vertex_index = j * width + i;
+            // Top triangle 
+            m_indices[index++] = vertex_index;
+            m_indices[index++] = vertex_index + width + 1;
+            m_indices[index++] = vertex_index + 1;
+
+            // Bottom triangle
+            m_indices[index++] = vertex_index;
+            m_indices[index++] = vertex_index + width;
+            m_indices[index++] = vertex_index + width+ 1;
+        }
+    } 
+#else
     // 2 triangles for every quad of the terrain mesh
     //  with 3 indices for each triangle in the terrain mesh
     //const uint32_t indices = realW * realH * TRIANGLES_PER_QUAD * INDICES_PER_TRIANGLE;
@@ -180,6 +224,7 @@ void Terrain::generateIndices()
         std::cout << ' ' << vertexIndex-1 + width << ' ' << (y+1) * width << std::endl;
     #endif
     }
+#endif
 }
 
 void Terrain::generateNormals()
@@ -189,6 +234,25 @@ void Terrain::generateNormals()
 
     // Compute normal for each triangle as a cross product of its edges
     glm::vec3 normal;
+
+#ifndef TRIANGLE_STRIP
+    for (uint32_t i = 0; i < m_indices.size(); i += 3)
+    {
+        uint32_t id1 = m_indices[i + 0];
+        uint32_t id2 = m_indices[i + 1];
+        uint32_t id3 = m_indices[i + 2];
+        const glm::vec3& v0 = m_vertices[id1];
+        const glm::vec3& v1 = m_vertices[id2];
+        const glm::vec3& v2 = m_vertices[id3];
+
+        normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+        // Save for each vertex
+        m_normals[id1] += normal;
+        m_normals[id2] += normal;
+        m_normals[id3] += normal;
+    }
+#else
     const uint32_t width = m_size.x;
     const uint32_t height = m_size.y;
     const uint32_t realH = height -1;
@@ -201,9 +265,9 @@ void Terrain::generateNormals()
             uint32_t id1 = m_indices[i + 0];
             uint32_t id2 = m_indices[i + 1];
             uint32_t id3 = m_indices[i + 2];
-#ifdef DEBUG_STRIP
+    #ifdef DEBUG_STRIP
             std::cout << id1 << ' ' << id2 << ' ' << id3 << ' ';
-#endif
+    #endif
             const glm::vec3& v0 = m_vertices[id1];
             const glm::vec3& v1 = m_vertices[id2];
             const glm::vec3& v2 = m_vertices[id3];
@@ -216,12 +280,12 @@ void Terrain::generateNormals()
 
             ++i;
         }
-#ifdef DEBUG_STRIP
+    #ifdef DEBUG_STRIP
         std::cout << std::endl;
-#endif
+    #endif
         i += 4;
     }
-
+#endif
     // TODO slope
     //const glm::vec3 up(0.0f, 1.0f, 0.0f);
 
@@ -242,20 +306,15 @@ void Terrain::generateBuffers()
     m_vboTexels = std::make_shared<VertexBuffer>(
         m_texCoords.size() * sizeof(glm::vec2), m_texCoords.data());
 
-    //m_vboColors = std::make_shared<VertexBuffer>(
-    //    m_colors.size() * sizeof(glm::vec3), m_colors.data());
-
     std::shared_ptr ibo = std::make_shared<IndexBuffer>(m_indices.size(), m_indices.data());
 
     m_vboVertices->set_layout(BufferLayout({{ElementType::Float3, "Position"}}));
     m_vboNormals->set_layout(BufferLayout({{ElementType::Float3, "Normal"}}));
     m_vboTexels->set_layout(BufferLayout({{ElementType::Float2, "TexCoords"}}));
-    //m_vboColors->set_layout(BufferLayout({{ElementType::Float3, "Color"}}));
 
     m_vao.add_vertex_buffer(m_vboVertices);
     m_vao.add_vertex_buffer(m_vboNormals);
     m_vao.add_vertex_buffer(m_vboTexels);
-    //m_vao.add_vertex_buffer(m_vboColors);
     m_vao.set_index_buffer(ibo);
 }
 
@@ -298,27 +357,42 @@ void Terrain::render(const glm::mat4& projView) const
 {
     // Disable lighting because it changes the primary color of the vertices that are
     // used for the multitexture blending.
-    //glEnable(GL_BLEND);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    shader->use();
-    shader->set_mat4("MVP", projView * m_model);
 
-    glActiveTexture(GL_TEXTURE0);
-    //glActiveTexture(GL_TEXTURE1);
-    //glActiveTexture(GL_TEXTURE2);
-    //tex1->bind();
-    //tex1->bind_unit(0);
-    ///tex2->bind_unit(1);
-    ///tex3->bind_unit(2);
+    // TODO better
+    if (m_blending)
+    {
+        //glEnable(GL_BLEND);
+        shMulti->use();
+        shMulti->set_mat4("MVP", projView * m_model);
+        shMulti->set_int("layers", m_regions.size());
 
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
 
-    m_surface.bind();
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        //glActiveTexture(GL_TEXTURE0);
+        //glActiveTexture(GL_TEXTURE1);
+        //glActiveTexture(GL_TEXTURE2);
+        //tex1->bind();
+        //tex1->bind_unit(0);
+        ///tex2->bind_unit(1);
+        ///tex3->bind_unit(2);
+        //glDisable(GL_BLEND);
+    }
+    else
+    {
+        shSingle->use();
+        shSingle->set_mat4("MVP", projView * m_model);
+        m_surface.bind();
+    }
+
     m_vao.bind();
 
     // Rendering using indexed element arrays
-    //glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+#ifndef TRIANGLE_STRIP
+    glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+#else
     glDrawElements(GL_TRIANGLE_STRIP, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+#endif
 }
 
 
@@ -495,7 +569,7 @@ void Terrain::onNoiseChanged()
                 heightValue = glm::clamp(heightValue - m_falloffMap[index], 0.f, 1.f);
 
             m_vertices[index].y = heightValue * m_heightScale;
-            m_colors[index] = regionColorIn(heightValue);
+            regionColorIn(heightValue, index);
         }
 
     // Update buffers
@@ -503,7 +577,7 @@ void Terrain::onNoiseChanged()
 
     updateVerticesBuffer();
     updateNormalsBuffer();
-    m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
+    updateTextures();
 }
 
 void Terrain::initRegions()
@@ -520,17 +594,79 @@ void Terrain::initRegions()
     };
 }
 
-glm::vec3 Terrain::regionColorIn(float heightValue) const
+float getPercent(const float min, const float max, const float v) noexcept
 {
-    for (const Region& r : m_regions)
+    return fabs((v - max) / (min - max));
+}
+
+void Terrain::regionColorIn(float heightValue, uint32_t index)
+{
+    if (m_blending)
     {
-        if (r.toHeight >= heightValue)
-            return r.color;
+        //TODO check size
+        //
+
+        uint32_t i = 0;
+        for ( ; i < m_regions.size()-1; ++i)
+        {
+            const Region& r = m_regions[i];
+            const Region& r2 = m_regions[i + 1];
+            float lowInt = i ? m_regions[i-1].toHeight : 0.0f;
+
+            if (heightValue >= lowInt && heightValue <= r.toHeight)
+            {
+                float opacity = getPercent(lowInt, r.toHeight, heightValue);
+                m_colors[i][index] = glm::vec4(glm::vec3(r.color), opacity);
+                m_colors[++i][index] = glm::vec4(glm::vec3(r2.color), 1.0-opacity);
+                break;
+            }
+        }
+
+        for ( ; i < m_regions.size()-1; ++i)
+                m_colors[i][index] = glm::vec4(0.0f);
+
+        //m_colors[m_regions.size()-1][index] = glm::vec4(0.0f);
+
+        /*
+        const Region& ra = m_regions[0];
+        m_colors[0][index] = 
+          glm::vec4(glm::vec3(ra.color), std::max(0.0f, (ra.toHeight - heightValue)/ra.toHeight));
+                    //getPercent(0.0f, r.toHeight, heightValue));
+        for (uint32_t i = 1; i < m_regions.size(); ++i)
+        {
+            const Region& r = m_regions[i];
+            if (r.toHeight >= heightValue)
+            {
+                m_colors[i][index] = 
+                  glm::vec4(glm::vec3(r.color), 
+                            getPercent(m_regions[i-1].toHeight, r.toHeight, heightValue));
+            }
+            else
+                m_colors[i][index] = glm::vec4(0.0f);
+        }
+        */
+        if (m_regions.size())
+            //return m_regions.back().color;
+            return;
+        else
+            return;
+            //return glm::vec4(1.f, 1.f, 1.f, 1.f);
     }
-    if (m_regions.size())
-        return m_regions.back().color;
     else
-        return glm::vec3(1.f, 1.f, 1.f);
+    {
+        for (const Region& r : m_regions)
+        {
+            if (r.toHeight >= heightValue)
+            {
+                m_colors[0][index] = r.color;
+                return;
+            }
+        }
+        if (m_regions.size())
+            m_colors[0][index] = m_regions.back().color;
+        else
+            m_colors[0][index] = glm::vec4(1.f, 1.f, 1.f, 1.f);
+    }
 }
 
 void Terrain::onRegionsChanged()
@@ -542,10 +678,10 @@ void Terrain::onRegionsChanged()
         for (uint32_t x = 0; x < width; ++x)
         {
             uint32_t index = y * width + x;
-            m_colors[index] = regionColorIn(m_heightMap[index]);
+            regionColorIn(m_heightMap[index], index);
         }
 
-    m_surface.upload((float*)&m_colors[0], width, height);
+    updateTextures();
 }
 
 void Terrain::generateFalloffMap()
@@ -563,4 +699,157 @@ void Terrain::generateFalloffMap()
         }
 }
 
+void Terrain::initColorTextureArray()
+{
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
 
+    //glTexImage3D(GL_TEXTURE_2D_ARRAY,
+  	//             0,                         // level,
+  	//             GL_RGBA8,                  //internalformat, expects Vec3,
+    //                                        // Last is the opacity map alpha
+  	//             m_size.x, m_size.y,
+    //             m_regions.size(),          // Number of textures
+    //             0,                         // border
+    //             GL_RGBA,                   // format
+  	//             GL_FLOAT,                  // type
+  	//             NULL);                     // data
+
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, m_size.x, m_size.y, m_regions.size());
+
+}
+
+void Terrain::fillColorTextureArray()
+{
+    // BOUND BEFORE!
+
+    for (uint32_t i = 0; i < m_regions.size(); ++i)
+    {
+        subColorAt(i);
+    }
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+}
+
+void Terrain::subColorAt(uint32_t i)
+{
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,                          // level
+                    0, 0, i,                    // offset
+                    m_size.x, m_size.y,
+                    1,
+                    GL_RGBA, 
+                    GL_FLOAT, 
+                    m_colors[i].data());
+
+
+    // TODO mipmaps
+    /*
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 
+                 i, 
+  	             GL_RGBA8,                  //internalformat, expects Vec3,
+                                            // Last is the opacity map alpha
+  	             m_size.x, m_size.y,
+                 m_regions.size(),          // Number of textures
+                 0,                         // border
+                 GL_RGBA,                   // format
+  	             GL_FLOAT,                  // type
+  	             m_colors[i].data());                     // data
+glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, format, width, height, num_layers, ...);
+glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, format, width/2, height/2, num_layers, ...);
+glTexImage3D(GL_TEXTURE_2D_ARRAY, 2, format, width/4, height/4, num_layers, ...);    
+
+    */
+}
+
+/*
+void initTextureArray()
+{
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures);
+
+    const glm::uvec2 maxSize = maxSizeFromImages();
+
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,
+  	             0,                         // level,
+  	             GL_RGBA8,                  //internalformat, expects JPGs or simply Vec3,
+                                            // Last is the opacity map alpha
+  	             maxSize.x,
+  	             maxSize.y,
+                 m_images.size(),
+                 0
+                 GL_RGBA,
+  	             GL_UNSIGNED_BYTE,
+  	             NULL);
+}
+    //The last argument is NULL as we want to iterate through our images and put them in the correct position in our texture array using glTexSubImage
+glTexImage3D(GL_TEXTURE_2D_ARRAY, 
+             0, 
+             internalTextureFormat, 
+             textureWidth, 
+             textureHeight, 
+             numberOfTextures, 
+             0, 
+             textureFormat, 
+             GL_UNSIGNED_BYTE, 
+             NULL);
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+}
+
+glm::uvec2 Terrain::maxSizeFromImages()
+{
+    uint32_t maxWidth = 0, maxHeight = 0;
+    for (const ImageInfo& i : m_images)
+    {
+        if (i.width > maxWidth)
+            maxWidth = i.width;
+        if (i.height > maxHeight)
+            maxHeight = i.height;
+    }
+    return glm::uvec(maxWidth, maxHeight);
+}
+
+void fillTextureArray()
+{
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 
+                   mipLevelCount, 
+                   GL_RGBA8, 
+                   width, 
+                   height, 
+                   layerCount);
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,
+  	             GLint level,
+  	             GLint internalformat,
+  	             GLsizei width,
+  	             GLsizei height,
+  	             GLsizei depth,
+  	             GLint border,
+  	             GLenum format,
+  	             GLenum type,
+  	             const void * data);
+
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 
+                    0, 
+                    0, 
+                    0, 
+                    i, 
+                    image.width, 
+                    image.height, 
+                    1, 
+                    textureFormat, 
+                    GL_UNSIGNED_BYTE, 
+                    image.pixelData);
+}
+*/
