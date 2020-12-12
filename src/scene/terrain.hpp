@@ -83,6 +83,8 @@ public:
 
     uint32_t totalIndices() const { return m_indices.size(); }
 
+    uint32_t totalTriangles() const { return (m_size.x * 2 -2) * (m_size.y-1); }
+
     // Height-based texturing
     struct Region
     {

@@ -243,24 +243,30 @@ void Application::show_interface()
 
             if (ImGui::InputFloat3("Position", glm::value_ptr(pos)))
                 camera->set_position(pos);
-
             if (ImGui::SliderFloat("Pitch angle", &pitch, -89.f, 89.f, "%.0f deg"))
                 camera->set_pitch(pitch);
-
             if (ImGui::SliderFloat("Yaw angle", &yaw, 0.f, 360.f, "%.0f deg"))
                 camera->set_yaw(yaw);
-
             if (ImGui::SliderAngle("Field of view", &fov, 0.f, 180.f))
                 camera->set_field_of_view(fov);
-
             if (ImGui::SliderFloat("Near plane", &near, 0.f, 10.f))
                 camera->set_near_plane_dist(near);
-
             if (ImGui::SliderFloat("Far plane", &far, 100.f, 1000.f))
                 camera->set_far_plane_dist(far);
 
             // TODO camera preset positions relative to terrain size
-            
+            ImGui::Text("Position Presets");
+            ImGui::Separator();
+            if (ImGui::Button("From Top"))
+                cameraSetPresetTop();
+            ImGui::SameLine();
+            if (ImGui::Button("From Front"))
+                cameraSetPresetFront();
+            ImGui::SameLine();
+            if (ImGui::Button("From Side"))
+                cameraSetPresetSideWays();
+
+            ImGui::NewLine();
         }
         if (ImGui::CollapsingHeader("Terrain Controls", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -300,7 +306,7 @@ void Application::show_interface()
 
                 if (ImGui::DragInt("Seed", &seed))
                     noiseMap.reseed(seed);
-                if (ImGui::DragFloat("Scale", &scale, 0.001f, 0.f, 100.f))
+                if (ImGui::DragFloat("Scale", &scale, 0.01f, 0.f, 100.f))
                     noiseMap.setScale(scale);
 
                 // Select noise function
@@ -319,7 +325,7 @@ void Application::show_interface()
                         noiseMap.setOctaves(octaves);
                     if (ImGui::DragFloat("Persistence", &persistence, 0.01f, 0.f, 1.f))
                         noiseMap.setPersistence(persistence);
-                    if (ImGui::DragFloat("Lacunarity", &lacunarity, 0.1f, 1.f, 100.f))
+                    if (ImGui::DragFloat("Lacunarity", &lacunarity, 0.01f, 1.f, 100.f))
                         noiseMap.setLacunarity(lacunarity);
                 }
 
@@ -451,7 +457,7 @@ void Application::status_window()
                     1000.0f / io.Framerate, io.Framerate);
         ImGui::Text("%d vertices, %d indices (%d triangles)", 
                     terrain->totalVertices(), terrain->totalIndices(),
-                    terrain->totalIndices() / 3);
+                    terrain->totalTriangles());
 
         // TODO terrain score
         // current camera position
@@ -527,3 +533,46 @@ void Application::showTexture(uint32_t texture_id, const glm::uvec2& texSize,
         }
     ImGui::EndGroup();
 }
+
+void Application::cameraSetPresetTop()
+{
+    camera->set_position(glm::vec3(5,20,0));
+    camera->set_pitch(-89);
+    camera->set_yaw(270);
+    camera->set_field_of_view(45);
+}
+
+void Application::cameraSetPresetFront()
+{
+    camera->set_position(glm::vec3(0,5,13));
+    camera->set_pitch(-22);
+    camera->set_yaw(270);
+    camera->set_field_of_view(45);
+}
+
+void Application::cameraSetPresetSideWays()
+{
+    camera->set_position(glm::vec3(7,11,12));
+    camera->set_pitch(-40);
+    camera->set_yaw(245);
+    camera->set_field_of_view(45);
+}
+
+            /*
+            Top
+                pos  5x, 20y, 0z
+                pitch -89
+                yaw 270
+                fov 45
+            Front
+                0, 5, 13
+                pitch -22
+                yaw 270
+                fov 45
+            Side ways
+                7, 11, 12
+                -40
+                245
+                45
+
+            */

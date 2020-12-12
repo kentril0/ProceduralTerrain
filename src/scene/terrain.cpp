@@ -6,6 +6,7 @@
 #define TRIANGLES_PER_QUAD 2
 #define INDICES_PER_TRIANGLE 3
 
+//#define DEBUG_STRIP
 
 Terrain::Terrain(uint32_t x, uint32_t y,
                  float tileScale, float heightScale,
@@ -75,26 +76,26 @@ void Terrain::generate()
     LOG_INFO("Terrain world dimensions: " << m_worldSize.x << " x " << m_worldSize.y);
 
     float S, T, X, Y, Z;
-    for (uint32_t j = 0; j < height; ++j)
-        for (uint32_t i = 0; i < width; ++i)
+    for (uint32_t y = 0; y < height; ++y)
+        for (uint32_t x = 0; x < width; ++x)
         {
-            uint32_t index = (j * width) + i;
+            uint32_t index = (y * width) + x;
 
             // Sample the height - value between <0; 1>
             float heightValue = m_heightMap[index];
 
             // Texture coords of the terrain from top-left (0,0) to bottom right (1,1)
-            S = (i / (float)(width -1));
-            T = (j / (float)(height-1));
+            S = x / (float)(width -1);
+            T = y / (float)(height-1);
 
             // Compute vertex positions in world units
             // Center the terrain around the local origin to the terrain dimensions:
             //  X: [-m_worldHalfSize.x, .., m_worldHalfSize.x]
             //  Z: [-m_worldHalfSize.y, ..., m_worldHalfSize.y]
             
-            X = (S * m_worldSize.x) - m_worldHalfSize.x;
+            X = S * m_worldSize.x - m_worldHalfSize.x;
             Y = heightValue * m_heightScale;
-            Z = (T * m_worldSize.y) - m_worldHalfSize.y;
+            Z = T * m_worldSize.y - m_worldHalfSize.y;
 
             m_texCoords[index] = glm::vec2(S, T);
             m_vertices[index] = glm::vec3(X, Y, Z);
@@ -121,46 +122,56 @@ void Terrain::generate()
     //indices.clear();
 }
 
-/**
- * @brief Builds an index buffer by constructing 2 triangles with vertices
- *        arranged in a CCW winding order (the top triangle t0 = (v0, v3, v1),
- *        the bottom triangle t1 = (v0, v2, v3)): v0 ---- v1
- *                                                |  \  t0 |
- *                                                |    \   |
- *                                                | t1   \ |
- *                                                v2 ---- v3
- */
 void Terrain::generateIndices()
 {
+    const uint32_t width = m_size.x;
+    const uint32_t height = m_size.y;
+    const uint32_t realW = width  -1;
+    const uint32_t realH = height -1;
+
     // 2 triangles for every quad of the terrain mesh
-    const uint32_t triangles = (m_size.x -1) * (m_size.y -1) * TRIANGLES_PER_QUAD;
+    //  with 3 indices for each triangle in the terrain mesh
+    //const uint32_t indices = realW * realH * TRIANGLES_PER_QUAD * INDICES_PER_TRIANGLE;
+    const uint32_t indices = m_vertices.size() * 2 - 2;
 
-    // 3 indices for each triangle in the terrain mesh
-    m_indices.resize(triangles * INDICES_PER_TRIANGLE);
+    m_indices.resize(indices);
+#ifdef DEBUG_STRIP
+    std::cout << "Indices: " << m_indices.size() << std::endl;
+#endif
 
+    // TODO better
     uint32_t index = 0;
-    for (uint32_t j = 0; j < (m_size.y -1); ++j)
+    for (uint32_t y = 0; y < realH; ++y)
     {
-        for (uint32_t i = 0; i < (m_size.x -1); ++i)
+        uint32_t vertexIndex = y * width;
+        m_indices[index++] = vertexIndex;
+    #ifdef DEBUG_STRIP
+        std::cout << vertexIndex;
+    #endif
+        for (uint32_t x = 0; x < width; ++x)
         {
-            uint32_t vertexIndex = (j * m_size.x) + i;
+            m_indices[index++] = vertexIndex + width;
+        #ifdef DEBUG_STRIP
+            std::cout << ' ' << vertexIndex + width;
+        #endif
+            if (x < realW)
+            {
+                m_indices[index++] = vertexIndex + 1;
+            #ifdef DEBUG_STRIP
+                std::cout << ' ' << vertexIndex + 1;
+            #endif
+            }
 
-            // Top triangle (v0, v3, v1)
-            m_indices[index++] = vertexIndex;
-            m_indices[index++] = vertexIndex + m_size.x + 1;
-            m_indices[index++] = vertexIndex + 1;
-
-            // Bottom triangle (v0, v2, v3)
-            m_indices[index++] = vertexIndex;
-            m_indices[index++] = vertexIndex + m_size.x;
-            m_indices[index++] = vertexIndex + m_size.x + 1;
+            ++vertexIndex;
         }
+        m_indices[index++] = vertexIndex-1 + width;
+        m_indices[index++] = (y+1) * width;
+    #ifdef DEBUG_STRIP
+        std::cout << ' ' << vertexIndex-1 + width << ' ' << (y+1) * width << std::endl;
+    #endif
     }
 }
 
-/**
- * @brief Generates normal of each triangle
- */
 void Terrain::generateNormals()
 {
     // Stored continuously
@@ -168,18 +179,37 @@ void Terrain::generateNormals()
 
     // Compute normal for each triangle as a cross product of its edges
     glm::vec3 normal;
-    for (uint32_t i = 0; i < m_indices.size(); i += 3)
+    const uint32_t width = m_size.x;
+    const uint32_t height = m_size.y;
+    const uint32_t realH = height -1;
+
+    uint32_t i = 0;
+    for (uint32_t y = 0; y < realH; ++y)
     {
-        const glm::vec3& v0 = m_vertices[m_indices[i + 0]];
-        const glm::vec3& v1 = m_vertices[m_indices[i + 1]];
-        const glm::vec3& v2 = m_vertices[m_indices[i + 2]];
+        for (uint32_t x = 0; x < width+1; ++x)
+        {
+            uint32_t id1 = m_indices[i + 0];
+            uint32_t id2 = m_indices[i + 1];
+            uint32_t id3 = m_indices[i + 2];
+#ifdef DEBUG_STRIP
+            std::cout << id1 << ' ' << id2 << ' ' << id3 << ' ';
+#endif
+            const glm::vec3& v0 = m_vertices[id1];
+            const glm::vec3& v1 = m_vertices[id2];
+            const glm::vec3& v2 = m_vertices[id3];
 
-        normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+            normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
 
-        // Save for each vertex
-        m_normals[m_indices[i + 0]] += normal;
-        m_normals[m_indices[i + 1]] += normal;
-        m_normals[m_indices[i + 2]] += normal;
+            m_normals[id1] += normal;
+            m_normals[id2] += normal;
+            m_normals[id3] += normal;
+
+            ++i;
+        }
+#ifdef DEBUG_STRIP
+        std::cout << std::endl;
+#endif
+        i += 4;
     }
 
     // TODO slope
@@ -274,7 +304,7 @@ void Terrain::render() const
 
     // Rendering using indexed element arrays
     //glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-    glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLE_STRIP, m_indices.size(), GL_UNSIGNED_INT, nullptr);
 }
 
 
@@ -379,6 +409,9 @@ void Terrain::regenerate(const glm::uvec2& newSize)
 
 void Terrain::onTileScaleChanged(float newScale)
 {
+    if (newScale == m_tileScale)
+        return;
+
     newScale = std::max(newScale, 0.01f);
     m_tileScale = newScale;
     const uint32_t width = m_size.x;
@@ -413,6 +446,9 @@ void Terrain::onTileScaleChanged(float newScale)
 
 void Terrain::onHeightScaleChanged(float newScale)
 {
+    if (newScale == m_heightScale)
+        return;
+
     newScale = std::max(newScale, 0.01f);
     const float invHeightScale = 1 / m_heightScale;
     for (glm::vec3& v : m_vertices) 
@@ -429,14 +465,19 @@ void Terrain::onHeightScaleChanged(float newScale)
 
 void Terrain::onNoiseChanged()
 {
+    // TODO really changed??
+    
     const uint32_t width = m_size.x;
     const uint32_t height = m_size.y;
     
-    for (uint32_t j = 0; j < height; ++j)
-        for (uint32_t i = 0; i < width; ++i)
+    for (uint32_t y = 0; y < height; ++y)
+        for (uint32_t x = 0; x < width; ++x)
         {
-            uint32_t index = (j * width) + i;
-            m_vertices[index].y = m_heightMap[index] * m_heightScale;
+            uint32_t index = y * width + x;
+            float heightValue = m_heightMap[index]; 
+
+            m_vertices[index].y = heightValue * m_heightScale;
+            m_colors[index] = regionColorIn(heightValue);
         }
 
     // Update buffers
@@ -444,6 +485,7 @@ void Terrain::onNoiseChanged()
 
     updateVerticesBuffer();
     updateNormalsBuffer();
+    m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
 }
 
 void Terrain::initRegions()
