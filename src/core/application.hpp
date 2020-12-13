@@ -61,7 +61,6 @@ private:
             for (const auto& c : vec_callbacks)
                 (this->*c)();
         }
-      //(this->*(callback_map[{key,action,state}]))(); 
     }
 
     // Functions modifying application state
@@ -90,7 +89,6 @@ private:
     // ----------------------------------------------------------------------------
     // Typedefs
     // ----------------------------------------------------------------------------
-    // TODO callback class??
     typedef void (Application::*Callback)(void);
     typedef std::vector<Callback> callbacks;
 

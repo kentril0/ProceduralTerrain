@@ -109,15 +109,6 @@ void Application::loop()
     // Frametime and FPS counter, updates once per 1 second
     if (currentFrame - framestamp > 1.0f)
     {
-        // TODO
-        // Frametime
-        //LOG_INFO("Frametime: " << (1000.0f / frames) << " ms");
-        //fmtcntr->set_text("Ftime: " + std::to_string(1000.0f / frames) + " ms");
-
-        // FPS
-        //LOG_INFO("FPS: " << (frames));
-        //fpscntr->set_text("FPS: " + std::to_string(frames));
-        
         framestamp += 1.0f;
         frames = 0;
     }
@@ -229,9 +220,6 @@ void Application::show_interface()
 {
     if (state == STATE_MODIFY)
     {
-        // TODO fix on rescale
-        //ImGui::ShowDemoWindow(NULL);
-
         if (!ImGui::Begin("Application Controls", NULL))
         {
             ImGui::End();
@@ -244,9 +232,6 @@ void Application::show_interface()
             if (ImGui::Checkbox(" Vertical sync", &vsync))
                 set_vsync(vsync);
             if (ImGui::Checkbox(" Wireframe", &m_wireframe)) {}
-
-
-            // TODO UI scaling
         }
 
         if (ImGui::CollapsingHeader("Camera Settings"))
@@ -489,7 +474,6 @@ void Application::status_window()
     if (state == STATE_FREEFLY)
         ImGui::SetNextWindowBgAlpha(0.35f);
 
-    // TODO fix on rescale
     // Collapsed or Clipped
     if (!ImGui::Begin("Application Metrics", NULL))
     {
@@ -505,9 +489,6 @@ void Application::status_window()
                     terrain->totalVertices(), terrain->totalIndices(),
                     terrain->totalTriangles());
 
-        // TODO terrain score
-        // current camera position
-    
     ImGui::End();
 }
 
@@ -517,8 +498,6 @@ void Application::set_state_modify()
 
     // Show the cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    // TODO
-    // ImGui::SetNextWindowSize(ImVec2(width * 0.3, height * 0.8));
 }
 
 void Application::set_state_freefly()

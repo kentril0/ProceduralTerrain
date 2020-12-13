@@ -81,7 +81,6 @@ void Terrain::generate()
     LOG_INFO("Terrain dimensions: " << width << " x " << height);
 
     // One vertex per pixel
-    // TODO interpolation factor
     const uint32_t totalVertices = width * height;
     LOG_INFO("Terrain: Number of vertices " << totalVertices);
 
@@ -129,7 +128,6 @@ void Terrain::generate()
             m_texCoords[index] = glm::vec2(S, T);
             m_vertices[index] = glm::vec3(X, Y, Z);
 
-            // TODO height-based texturing ADD BOOL or ANOTHER FUNCTION
             regionColorIn(heightValue, index);
         }
 
@@ -299,8 +297,6 @@ void Terrain::generateNormals()
         i += 4;
     }
 #endif
-    // TODO slope
-    //const glm::vec3 up(0.0f, 1.0f, 0.0f);
 
     // Normalize each vertex normal
     for (glm::vec3& n : m_normals)
@@ -343,13 +339,9 @@ void Terrain::updateNormalsBuffer()
 
 void Terrain::render(const glm::mat4& projView) const
 {
-    // Disable lighting because it changes the primary color of the vertices that are
-    // used for the multitexture blending.
-
     // TODO better
     if (m_blending)
     {
-        //glEnable(GL_BLEND);
         shMulti->use();
         shMulti->set_mat4("MVP", projView * m_model);
         shMulti->set_int("layers", m_regions.size());
@@ -366,8 +358,6 @@ void Terrain::render(const glm::mat4& projView) const
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
-        //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); 
-        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     else
     {
@@ -381,7 +371,6 @@ void Terrain::render(const glm::mat4& projView) const
     // Rendering using indexed element arrays
 #ifndef TRIANGLE_STRIP
     glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
-    //glDisable(GL_BLEND);
 #else
     glDrawElements(GL_TRIANGLE_STRIP, m_indices.size(), GL_UNSIGNED_INT, nullptr);
 #endif
@@ -725,7 +714,6 @@ void Terrain::subColorAt(uint32_t i)
 {
     std::vector<glm::vec3> rcolors(colorTexSize * colorTexSize, 
                                    glm::vec3(m_regions[i].color));
-    //DERR(" Adding color: " << rcolors[i].x << ' ' << rcolors[i].y << ' ' << rcolors[i].z);
     glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
                     0,                          // level
                     0, 0, i,                    // offset
@@ -734,45 +722,7 @@ void Terrain::subColorAt(uint32_t i)
                     GL_RGB, 
                     GL_FLOAT, 
                     rcolors.data());
-                    //m_colors[i].data());
 }
-
-/*
-void Terrain::initColorTextureArray()
-{
-    glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
-
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,
-  	             0,                         // level,
-  	             GL_RGB,                  //internalformat, expects Vec3,
-                                            // Last is the opacity map alpha
-  	             colorTexSize, colorTexSize,
-                 m_regions.size(),          // Number of textures
-                 0,                         // border
-                 GL_RGB,                    // format
-  	             GL_FLOAT,                  // type
-  	             NULL);                     // data
-
-    //glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, m_size.x, m_size.y, m_regions.size());
-
-}
-
-void Terrain::fillColorTextureArray()
-{
-    // BOUND BEFORE!
-
-    for (uint32_t i = 0; i < m_regions.size(); ++i)
-    {
-        subColorAt(i);
-    }
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-}
-
-*/
 
 void Terrain::initTextureArray()
 {
@@ -798,9 +748,6 @@ void Terrain::initTextureArray()
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, format, width/2, height/2, num_layers, ...);
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 2, format, width/4, height/4, num_layers, ...);    
     */
-        //glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        //glTextureParameteri(ID, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     for (uint32_t i = 0; i < m_images.size(); ++i)
     {
@@ -908,7 +855,6 @@ void Terrain::initOpacityMap()
   	             GL_FLOAT,                  // type
   	             NULL);                     // data
 
-    //glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, m_size.x, m_size.y, m_regions.size());
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, m_lastFiltering);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, m_lastFiltering);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
@@ -941,44 +887,3 @@ void Terrain::fillOpacityMap()
     DERR("  Done");
 }
 
-
-/*
-void fillTextureArray()
-{
-    glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures);
-    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 
-                   mipLevelCount, 
-                   GL_RGBA8, 
-                   width, 
-                   height, 
-                   layerCount);
-
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,
-  	             GLint level,
-  	             GLint internalformat,
-  	             GLsizei width,
-  	             GLsizei height,
-  	             GLsizei depth,
-  	             GLint border,
-  	             GLenum format,
-  	             GLenum type,
-  	             const void * data);
-
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 
-                    0, 
-                    0, 
-                    0, 
-                    i, 
-                    image.width, 
-                    image.height, 
-                    1, 
-                    textureFormat, 
-                    GL_UNSIGNED_BYTE, 
-                    image.pixelData);
-}
-*/

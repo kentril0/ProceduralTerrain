@@ -5,7 +5,8 @@
 #include "opengl/vertex_array.hpp"
 #include "opengl/proc_texture2d.hpp"
 
-#define TRIANGLE_STRIP
+
+#define TRIANGLE_STRIP  // Faster render times
 
 
 /**
@@ -129,7 +130,6 @@ public:
     struct Region
     {
         float toHeight;
-        // TODO union Texture2D
         glm::vec3 color;
         std::string name;
 
@@ -239,7 +239,7 @@ private:
 
     // Opacity map for blending
     std::vector<std::vector<float>> m_opacities;
-    uint32_t m_opacityMap;                  // TODO DEFINE
+    uint32_t m_opacityMap;
     void initOpacityMap();
     void fillOpacityMap();
 

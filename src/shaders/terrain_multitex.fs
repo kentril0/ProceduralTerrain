@@ -16,7 +16,6 @@ void main()
     {
         vec4 tex = texture(multiTex, vec3(fsTex, i));
         color += tex.rgb * texture(opacityMap, vec3(fsOpacity, i)).r; 
-        ///color += texture(opacityMap, vec3(fsTex, i)).a; 
     }
     final_color = vec4(color, 1.0);
 }

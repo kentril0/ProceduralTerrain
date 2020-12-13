@@ -9,23 +9,10 @@ ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
     m_texture(true),
     m_changed(false)
 {
-    // Internal format variants
-    //  GL_R8, base format: GL_RED
-    //  GL_R8_SNORM, base: GL_RED
-    //  GL_RGB8, base: GL_RGB
-    //  GL_RGB8_SNORM, base: GL_RGB
-    //  GL_RGBA8
-    //  GL_RGBA8_SNORM
-    //  GL_R32F, GL_RED
-    //  GL_RGB32F, GL_RGB
-
-    // Default: GL_RGB8, base: GL_RGB
-    // TODO
 
     m_pixelSize = 3;
     m_texture.set_internal_format(GL_RGB8);
     m_texture.set_image_format(GL_RGB);
-    //m_texture.set_filtering(GL_NEAREST, GL_NEAREST);
     m_texture.set_clamp_to_edge();
 
     fill();

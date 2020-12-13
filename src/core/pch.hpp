@@ -22,10 +22,10 @@
 #define PROJECT_NAME "Procedural Terrain Generator"
 
 // TODO turn on debug outputs
-#define DEBUG
+//#define DEBUG
 
 // TODO enable asserts
-#define ENABLE_ASSERTS
+//#define ENABLE_ASSERTS
 
 // TODO define logging level
 // Logging messages which are less severe than LOG_LEVEL will be ignored
