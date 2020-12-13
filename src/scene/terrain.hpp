@@ -5,6 +5,8 @@
 #include "opengl/vertex_array.hpp"
 #include "opengl/proc_texture2d.hpp"
 
+#define TRIANGLE_STRIP
+
 
 /**
  * @brief Interface responsible for generating the terrain mesh, texturing, TODO more
@@ -224,6 +226,7 @@ private:
     // Arrays of 2D textures
     uint32_t m_colorTextures;             ///< Solid colors as textures
     std::vector<glm::vec3> m_colors;
+    uint32_t m_lastFiltering = GL_NEAREST;
 
     const uint32_t colorTexSize = 8;
     void initColorTextureArray();

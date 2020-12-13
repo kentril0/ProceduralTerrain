@@ -373,7 +373,6 @@ void Terrain::render(const glm::mat4& projView) const
     {
         shSingle->use();
         shSingle->set_mat4("MVP", projView * m_model);
-        shSingle->set_vec2("scale", m_scaleFactor, m_scaleFactor);
         m_surface.bind();
     }
 
@@ -700,8 +699,8 @@ void Terrain::initColorTextureArray()
   	               colorTexSize, colorTexSize,
                    m_regions.size());
 
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, m_lastFiltering);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, m_lastFiltering);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 
@@ -789,9 +788,8 @@ void Terrain::initTextureArray()
                    maxSize.x, maxSize.y,
                    m_images.size());
 
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    // TODO GL_REPEAT
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER, m_lastFiltering);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER, m_lastFiltering);
     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
@@ -836,6 +834,8 @@ glm::uvec2 Terrain::maxSizeFromImages()
 void Terrain::setFilteringPoint()
 {
     DERR("Setting point filtering");
+    if (m_lastFiltering == GL_NEAREST)
+        return;
     if (m_blending)
     {
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
@@ -851,11 +851,16 @@ void Terrain::setFilteringPoint()
     }
     else
         m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
+
+    m_lastFiltering = GL_NEAREST;
 }
 
 void Terrain::setFilteringLinear()
 {
     DERR("Setting linear filtering");
+    if (m_lastFiltering == GL_LINEAR)
+        return;
+
     if (m_blending)
     {
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
@@ -871,6 +876,8 @@ void Terrain::setFilteringLinear()
     }
     else
         m_surface.set_linear_filtering();
+
+    m_lastFiltering = GL_LINEAR;
 }
 
 void Terrain::loadTexture(const char* name)
@@ -902,8 +909,8 @@ void Terrain::initOpacityMap()
   	             NULL);                     // data
 
     //glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, m_size.x, m_size.y, m_regions.size());
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, m_lastFiltering);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, m_lastFiltering);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 

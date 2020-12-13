@@ -393,12 +393,7 @@ void Application::show_interface()
                     else if (filterType == 1)
                         terrain->setFilteringLinear();
                 }
-                ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - 90);
-                if (ImGui::DragFloat("Texture scale", &scaleFactor, 0.01f, 0.1f, 16.f))
-                    terrain->setScaleFactor(scaleFactor);
-                ImGui::SameLine();
-                if (ImGui::Button("Default"))
-                    terrain->setScaleFactor(1.0f);
+                const float calcWidth = ImGui::CalcItemWidth() - 90;
 
                 // Select type of texturing
                 ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); 
@@ -449,10 +444,16 @@ void Application::show_interface()
                     terrain->setUsingColors(false);
                     static const std::vector<std::unique_ptr<Texture2D>>& guiTexs 
                         = terrain->textures();
+
+                    ImGui::SetNextItemWidth(calcWidth);
+                    if (ImGui::DragFloat("Texture scale", &scaleFactor, 0.01f, 0.1f, 16.f))
+                        terrain->setScaleFactor(scaleFactor);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Default"))
+                        terrain->setScaleFactor(1.0f);
                     
                     const float texW = 96;
                     const float texH = 96;
-
                     for (uint32_t j = 0; j < guiTexs.size(); ++j)
                     {
                           if (j > 0 && j % 3 != 0) { ImGui::SameLine(); }
