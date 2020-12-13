@@ -255,11 +255,10 @@ private:
     // [online]. Available at: https://www.youtube.com/watch?v=COmtTyLCd6I
     const float fade_a = 3.f;
     const float fade_b = 2.2f;
-    constexpr float fade(float v) const
+    float fade(float v) const
     {
         return pow(v,fade_a) / (pow(v,fade_a) + pow((fade_b - fade_b * v), fade_a));
     }
-
 };
 
 

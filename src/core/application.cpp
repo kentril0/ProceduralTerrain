@@ -241,8 +241,8 @@ void Application::show_interface()
             float pitch = camera->get_pitch();
             float yaw = camera->get_yaw();
             static float fov = glm::radians(camera->get_field_of_view());
-            static float near = camera->get_near_plane_dist();
-            static float far = camera->get_far_plane_dist();
+            static float nearC = camera->get_near_plane_dist();
+            static float farC = camera->get_far_plane_dist();
 
             if (ImGui::InputFloat3("Position", glm::value_ptr(pos)))
                 camera->set_position(pos);
@@ -252,10 +252,10 @@ void Application::show_interface()
                 camera->set_yaw(yaw);
             if (ImGui::SliderAngle("Field of view", &fov, 0.f, 180.f))
                 camera->set_field_of_view(fov);
-            if (ImGui::SliderFloat("Near plane", &near, 0.f, 10.f))
-                camera->set_near_plane_dist(near);
-            if (ImGui::SliderFloat("Far plane", &far, 100.f, 1000.f))
-                camera->set_far_plane_dist(far);
+            if (ImGui::SliderFloat("Near plane", &nearC, 0.f, 10.f))
+                camera->set_near_plane_dist(nearC);
+            if (ImGui::SliderFloat("Far plane", &farC, 100.f, 1000.f))
+                camera->set_far_plane_dist(farC);
 
             // TODO camera preset positions relative to terrain size
             ImGui::Text("Position Presets");
