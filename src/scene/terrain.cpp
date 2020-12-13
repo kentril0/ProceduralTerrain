@@ -42,17 +42,17 @@ Terrain::Terrain(const glm::uvec2& size,
 
 void Terrain::init()
 {
-    m_surface.set_internal_format(GL_RGBA8);
-    m_surface.set_image_format(GL_RGBA);
+    m_surface.set_internal_format(GL_RGB8);
+    m_surface.set_image_format(GL_RGB);
     m_surface.set_clamp_to_edge();
     m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
 
+    glGenTextures(1, &m_colorTextures);
     glGenTextures(1, &m_textureArray);
     glGenTextures(1, &m_opacityMap);
-//    glCreateTextures(1, &m_textures);
-//    glCreateTextures(2, &m_opacityMaps);
-//
+
     initRegions();
+    initColorTextureArray();
     generateFalloffMap();
     generate();
 }
@@ -62,7 +62,13 @@ void Terrain::addShader(const std::shared_ptr<Shader>& sh)
     if (shSingle == nullptr)
         shSingle = sh;
     else if (shMulti == nullptr)
+    {
         shMulti = sh;
+        shMulti->use();
+        shMulti->set_int("multiTex", 0);
+        shMulti->set_int("opacityMap", 1);
+        glUseProgram(0);
+    }
     // TODO others
 }
 
@@ -82,17 +88,11 @@ void Terrain::generate()
     m_vertices.resize(totalVertices);
     m_normals.resize(totalVertices);
     m_texCoords.resize(totalVertices);
+    m_colors.resize(totalVertices);
+    m_opacities.resize(m_regions.size());
 
-    // Initialize color contributions
-    {
-        uint32_t totalColors = 1;
-        if (m_blending)
-            totalColors = m_regions.size();
-        m_colors.resize(totalColors);
-
-        for (uint32_t i = 0; i < totalColors; ++i)
-            m_colors[i].resize(totalVertices);
-    }
+    for (uint32_t i = 0; i < m_regions.size(); ++i)
+        m_opacities[i].resize(totalVertices);
 
     // Calculate size of the terrain in world units
     // The dimensions in world units are [0, ..., size-1] 
@@ -148,12 +148,22 @@ void Terrain::updateTextures()
 {
     if (m_blending)
     {
-        initColorTextureArray();
-        fillColorTextureArray();
+        initOpacityMap();
+        fillOpacityMap();
+
+        if (m_usingColors)
+        {
+            //initColorTextureArray();
+            fillColorTextureArray();
+        }
+        else    // Textures
+        {
+                // Not changing
+        }
     }
     else
     {
-        m_surface.upload((float*)&m_colors[0][0], m_size.x, m_size.y);
+        m_surface.upload((float*)&m_colors[0], m_size.x, m_size.y);
     }
 }
 
@@ -345,7 +355,16 @@ void Terrain::render(const glm::mat4& projView) const
         shMulti->set_int("layers", m_regions.size());
         shMulti->set_vec2("scale", m_scaleFactor, m_scaleFactor);
 
-        glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureArray);
+
+        glActiveTexture(GL_TEXTURE0);
+        if (m_usingColors)
+            glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
+        else
+        {
+            glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureArray);
+        }
+
+        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
         //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); 
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -525,7 +544,6 @@ void Terrain::onHeightScaleChanged(float newScale)
 
 void Terrain::onNoiseChanged()
 {
-    // TODO really changed??
     if (!m_heightMap.changed())  
         return;
 
@@ -588,7 +606,7 @@ void Terrain::regionColorIn(float heightValue, uint32_t index)
             {
                 if (i == m_regions.size()-1)
                 {
-                    m_colors[i][index] = glm::vec4(glm::vec3(r.color), 1.0f);
+                    m_opacities[i][index] = 1.0f;
                     i++;
                     break;
                 }
@@ -601,19 +619,25 @@ void Terrain::regionColorIn(float heightValue, uint32_t index)
                 const float endBlend = r.toHeight + spaceLen;
                 float opacity = 1.0f - getPercent(startBlend, endBlend, heightValue);
 
-
-                m_colors[i][index] = glm::vec4(glm::vec3(r.color), opacity);
-                const Region& r2 = m_regions[i + 1];
-                m_colors[++i][index] = glm::vec4(glm::vec3(r2.color), 1.0-opacity);
+                m_opacities[i][index] = opacity;
+                m_opacities[++i][index] = 1.0-opacity;
                 ++i;
                 break;
             }
             else
-                m_colors[i][index] = glm::vec4(0.0f);
+                m_opacities[i][index] = 0.0f;
         }
         // Assign zero to rest
         for ( ; i < m_regions.size(); ++i)
-            m_colors[i][index] = glm::vec4(0.0f);
+            m_opacities[i][index] = 0.0f;
+
+#ifdef CHECK_HOLDS
+        float total = 0;
+        for (uint32_t j = 0; j < m_regions.size(); ++j)
+            total += m_opacities[j][index];
+        
+        assert(total == 1.0f);
+#endif
     }
     else
     {
@@ -621,14 +645,14 @@ void Terrain::regionColorIn(float heightValue, uint32_t index)
         {
             if (r.toHeight >= heightValue)
             {
-                m_colors[0][index] = r.color;
+                m_colors[index] = r.color;
                 return;
             }
         }
         if (m_regions.size())
-            m_colors[0][index] = m_regions.back().color;
+            m_colors[index] = m_regions.back().color;
         else
-            m_colors[0][index] = glm::vec4(1.f, 1.f, 1.f, 1.f);
+            m_colors[index] = glm::vec3(1.f, 1.f, 1.f);
     }
 }
 
@@ -667,16 +691,66 @@ void Terrain::generateFalloffMap()
 
 void Terrain::initColorTextureArray()
 {
+    DERR("Initializing color map");
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
+
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 
+                   1,                   // levels
+                   GL_RGB8, 
+  	               colorTexSize, colorTexSize,
+                   m_regions.size());
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    DERR("  Done");
+}
+
+void Terrain::fillColorTextureArray()
+{
+    DERR("Filling color map");
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
+
+    for (uint32_t i = 0; i < m_regions.size(); ++i)
+    {
+        subColorAt(i);
+    }
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    DERR("  Done");
+}
+
+void Terrain::subColorAt(uint32_t i)
+{
+    std::vector<glm::vec3> rcolors(colorTexSize * colorTexSize, 
+                                   glm::vec3(m_regions[i].color));
+    //DERR(" Adding color: " << rcolors[i].x << ' ' << rcolors[i].y << ' ' << rcolors[i].z);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                    0,                          // level
+                    0, 0, i,                    // offset
+  	                colorTexSize, colorTexSize,
+                    1,
+                    GL_RGB, 
+                    GL_FLOAT, 
+                    rcolors.data());
+                    //m_colors[i].data());
+}
+
+/*
+void Terrain::initColorTextureArray()
+{
     glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
 
     glTexImage3D(GL_TEXTURE_2D_ARRAY,
   	             0,                         // level,
-  	             GL_RGBA8,                  //internalformat, expects Vec3,
+  	             GL_RGB,                  //internalformat, expects Vec3,
                                             // Last is the opacity map alpha
-  	             m_size.x, m_size.y,
+  	             colorTexSize, colorTexSize,
                  m_regions.size(),          // Number of textures
                  0,                         // border
-                 GL_RGBA,                   // format
+                 GL_RGB,                    // format
   	             GL_FLOAT,                  // type
   	             NULL);                     // data
 
@@ -699,75 +773,50 @@ void Terrain::fillColorTextureArray()
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
-void Terrain::subColorAt(uint32_t i)
+*/
+
+void Terrain::initTextureArray()
 {
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
-                    0,                          // level
-                    0, 0, i,                    // offset
-                    m_size.x, m_size.y,
-                    1,
-                    GL_RGBA, 
-                    GL_FLOAT, 
-                    m_colors[i].data());
+    DERR("Initializing texture map");
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureArray);
 
+    const glm::uvec2 maxSize = maxSizeFromImages();
+    DERR("Max texture size: " << maxSize.x << " x " << maxSize.y);
 
-    // TODO mipmaps
-    /*
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 
-                 i, 
-  	             GL_RGBA8,                  //internalformat, expects Vec3,
-                                            // Last is the opacity map alpha
-  	             m_size.x, m_size.y,
-                 m_regions.size(),          // Number of textures
-                 0,                         // border
-                 GL_RGBA,                   // format
-  	             GL_FLOAT,                  // type
-  	             m_colors[i].data());                     // data
-glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, format, width, height, num_layers, ...);
-glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, format, width/2, height/2, num_layers, ...);
-glTexImage3D(GL_TEXTURE_2D_ARRAY, 2, format, width/4, height/4, num_layers, ...);    
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 
+                   1,           // TODO gen mipmaps mipLevelCount
+                   GL_RGB8,  // TODO
+                   maxSize.x, maxSize.y,
+                   m_images.size());
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    // TODO GL_REPEAT
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_REPEAT);
+
+    /* TODO mipmaps
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, format, width, height, num_layers, ...);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 1, format, width/2, height/2, num_layers, ...);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 2, format, width/4, height/4, num_layers, ...);    
+    */
         //glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
         //glTextureParameteri(ID, GL_TEXTURE_WRAP_T, GL_REPEAT);
         //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-    */
-}
-
-/*
-void initTextureArray()
-{
-    glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures);
-
-    const glm::uvec2 maxSize = maxSizeFromImages();
-
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,
-  	             0,                         // level,
-  	             GL_RGBA8,                  //internalformat, expects JPGs or simply Vec3,
-                                            // Last is the opacity map alpha
-  	             maxSize.x,
-  	             maxSize.y,
-                 m_images.size(),
-                 0
-                 GL_RGBA,
-  	             GL_UNSIGNED_BYTE,
-  	             NULL);
-}
-    //The last argument is NULL as we want to iterate through our images and put them in the correct position in our texture array using glTexSubImage
-glTexImage3D(GL_TEXTURE_2D_ARRAY, 
-             0, 
-             internalTextureFormat, 
-             textureWidth, 
-             textureHeight, 
-             numberOfTextures, 
-             0, 
-             textureFormat, 
-             GL_UNSIGNED_BYTE, 
-             NULL);
-
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    for (uint32_t i = 0; i < m_images.size(); ++i)
+    {
+        const ImageInfo& imgI = m_images[i];
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                        0,                          // level
+                        0, 0, i,                    // offset
+                        imgI.width, imgI.height,
+                        1,
+                        GL_RGB,                 // TODO format
+  	                    GL_UNSIGNED_BYTE,
+                        imgI.data);
+    }
+    DERR("  Done");
 }
 
 glm::uvec2 Terrain::maxSizeFromImages()
@@ -780,9 +829,113 @@ glm::uvec2 Terrain::maxSizeFromImages()
         if (i.height > maxHeight)
             maxHeight = i.height;
     }
-    return glm::uvec(maxWidth, maxHeight);
+    return glm::uvec2(maxWidth, maxHeight);
 }
 
+
+void Terrain::setFilteringPoint()
+{
+    DERR("Setting point filtering");
+    if (m_blending)
+    {
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureArray);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    }
+    else
+        m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
+}
+
+void Terrain::setFilteringLinear()
+{
+    DERR("Setting linear filtering");
+    if (m_blending)
+    {
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureArray);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    }
+    else
+        m_surface.set_linear_filtering();
+}
+
+void Terrain::loadTexture(const char* name)
+{
+    int w, h, channels;
+    // TODO FREE LOADED DATA in DESTR
+    uint8_t* data = load_image(name, false, &w, &h, &channels);
+
+    m_images.push_back(ImageInfo(data, w, h));
+    guiTextures.reserve(m_regions.size());
+    guiTextures.push_back(std::make_unique<Texture2D>(data, w, h, false, true));
+}
+
+void Terrain::initOpacityMap()
+{
+    DERR("Init opacity map");
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
+
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,
+  	             0,                         // level,
+  	             GL_R8,                    //internalformat, expects ALPHA ONLY
+                                            // Last is the opacity map alpha
+                 m_size.x, m_size.y,
+                 m_regions.size(),          // Number of textures
+                 0,                         // border
+                 GL_RED,                    // format
+  	             GL_FLOAT,                  // type
+  	             NULL);                     // data
+
+    //glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, m_size.x, m_size.y, m_regions.size());
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    DERR("  Done");
+}
+
+void Terrain::fillOpacityMap()
+{
+    DERR("Filling opacity map");
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
+
+    for (uint32_t i = 0; i < m_regions.size(); ++i)
+    {
+
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY,
+                        0,                          // level
+                        0, 0, i,                    // offset
+                        m_size.x, m_size.y,
+                        1,
+                        GL_RED, 
+                        GL_FLOAT, 
+                        m_opacities[i].data());
+    }
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+    DERR("  Done");
+}
+
+
+/*
 void fillTextureArray()
 {
     glBindTexture(GL_TEXTURE_2D_ARRAY, m_textures);
@@ -822,41 +975,3 @@ void fillTextureArray()
                     image.pixelData);
 }
 */
-
-void Terrain::setFilteringPoint()
-{
-    if (m_blending)
-    {
-        glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-    }
-    else
-        m_surface.set_filtering(GL_NEAREST, GL_NEAREST);
-}
-
-void Terrain::setFilteringLinear()
-{
-    if (m_blending)
-    {
-        glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-    }
-    else
-        m_surface.set_linear_filtering();
-}
-
-void Terrain::loadTexture(const char* name)
-{
-    int w, h, channels;
-    // TODO FREE LOADED DATA in DESTR
-    uint8_t* data = load_image(name, false, &w, &h, &channels);
-
-    m_images.push_back(ImageInfo(data, w, h));
-    guiTextures.reserve(m_regions.size());
-    guiTextures.emplace_back(Texture2D(data, w, h, false, true));
-}
-

@@ -32,7 +32,7 @@ Texture2D::Texture2D(const std::string& filename, bool alpha, bool mps)
 Texture2D::Texture2D(const uint8_t* data, uint32_t w, uint32_t h, bool alpha, bool mps)
     : m_width(w), 
       m_height(h), 
-      m_internal_format(GL_RGBA8),
+      m_internal_format(alpha ? GL_RGBA8 : GL_RGB8),
       m_image_format(alpha ? GL_RGBA : GL_RGB),
       m_mipmaps(mps),
       m_filterMin(GL_LINEAR_MIPMAP_LINEAR),

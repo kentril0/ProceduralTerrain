@@ -56,6 +56,7 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     terrain->loadTexture("images/rocks.jpg");
     terrain->loadTexture("images/rocksHigh.jpg");
     terrain->loadTexture("images/snow.jpg");
+    terrain->initTextureArray();
 
     // --------------------------------------------------------------------------
     // Register callbacks
@@ -411,6 +412,7 @@ void Application::show_interface()
                 // Terrain Colors
                 if (use_type == TERR_COLORS)
                 {
+                    terrain->setUsingColors(true);
                     static std::vector<Terrain::Region>& regions = terrain->regions();
                     std::string elemName;
 
@@ -444,17 +446,18 @@ void Application::show_interface()
                 // Textures
                 else if (use_type == TERR_TEXTURES)
                 {
-                    // TODO scale icons
-                    ImGui::TextWrapped("Hello, below are images of textures");
+                    terrain->setUsingColors(false);
+                    static const std::vector<std::unique_ptr<Texture2D>>& guiTexs 
+                        = terrain->textures();
                     
                     const float texW = 96;
                     const float texH = 96;
 
-                    for (int i = 0; i < 3; ++i)
+                    for (uint32_t j = 0; j < guiTexs.size(); ++j)
                     {
-                      if (i > 0) { ImGui::SameLine(); }
-                      showTexture(terrain->heightMap().ID(), terrain->heightMap().size(), 
-                                  texW, texH);
+                          if (j > 0 && j % 3 != 0) { ImGui::SameLine(); }
+                          showTexture(guiTexs[j]->ID(), guiTexs[j]->size(), 
+                                      texW, texH);
                     }
                 }
             // Slope controls
@@ -540,7 +543,7 @@ void Application::showTexture(uint32_t texture_id, const glm::uvec2& texSize,
     ImTextureID tex_id = (void*)(intptr_t)texture_id;
     ImGui::BeginGroup();
         ImGui::Text("%u x %u", texSize.x, texSize.y);
-        HelpMarker("Same size as the terrain");
+        //HelpMarker("Same size as the terrain");
         ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right

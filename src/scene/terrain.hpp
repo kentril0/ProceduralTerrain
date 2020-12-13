@@ -38,6 +38,9 @@ public:
     // TODO ONLY RGB TEXTURES - JPGs
     void loadTexture(const char* name);
 
+    // After all texture have been inserted generate the texture map
+    void initTextureArray();
+
     //~Terrain();
 
     //@param projView Projection view matrix 
@@ -95,6 +98,8 @@ public:
 
     void setScaleFactor(float scaleFactor) { m_scaleFactor = scaleFactor; }
 
+    void setUsingColors(bool b) { m_usingColors = b; }
+
     // ------------------------------------------------------------------------
     // Getters
     // ------------------------------------------------------------------------
@@ -123,18 +128,18 @@ public:
     {
         float toHeight;
         // TODO union Texture2D
-        glm::vec4 color;
+        glm::vec3 color;
         std::string name;
 
         Region(const char* name, float height, const glm::vec3& c)
-          : toHeight(height), color(c, 1.0), name(name) {}
+          : toHeight(height), color(c), name(name) {}
 
         void addRegion() {}
     };
 
     std::vector<Region>& regions() { return m_regions; }
 
-    const std::vector<Texture2D>& textures() const { return guiTextures; }
+    const std::vector<std::unique_ptr<Texture2D>>& textures() const { return guiTextures; }
 
     float getScaleFactor() const { return m_scaleFactor; }
 
@@ -212,22 +217,28 @@ private:
           : data(img), width(w), height(h) {}
     };
     std::vector<ImageInfo> m_images;      ///< For Multitexturing
-    std::vector<Texture2D> guiTextures;     ///< For visualization
+    std::vector<std::unique_ptr<Texture2D>> guiTextures;     ///< For visualization
     float m_scaleFactor;                    ///< Texture scaling factor
     Texture2D m_surface;                  ///< Final surface texture
 
     // Arrays of 2D textures
-    //uint32_t m_colorTextures;             ///< Solid colors as textures
-    //uint32_t m_arrayTextures;             
-    uint32_t m_textureArray;                
-    uint32_t m_opacityMap;             
-    std::vector<std::vector<glm::vec4>> m_colors;
+    uint32_t m_colorTextures;             ///< Solid colors as textures
+    std::vector<glm::vec3> m_colors;
 
+    const uint32_t colorTexSize = 8;
     void initColorTextureArray();
     void fillColorTextureArray();
     void subColorAt(uint32_t i);
 
+    // Real textures
+    uint32_t m_textureArray;                
     glm::uvec2 maxSizeFromImages();
+
+    // Opacity map for blending
+    std::vector<std::vector<float>> m_opacities;
+    uint32_t m_opacityMap;                  // TODO DEFINE
+    void initOpacityMap();
+    void fillOpacityMap();
 
     //------------------------------------------------------------
     // Falloff map
