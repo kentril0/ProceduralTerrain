@@ -1,10 +1,17 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file terrain.hpp
+ * @brief Terrain class for generating a square mesh
+ *********************************************************/
+
 #pragma once
 
 #include "opengl/shader.hpp"
 #include "opengl/texture2d.hpp"
 #include "opengl/vertex_array.hpp"
 #include "opengl/proc_texture2d.hpp"
-
 
 #define TRIANGLE_STRIP  // Faster render times
 

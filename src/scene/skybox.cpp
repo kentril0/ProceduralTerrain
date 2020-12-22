@@ -1,6 +1,13 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file skybox.cpp
+ * @brief Skybox abstraction
+ *********************************************************/
+
 #include "core/pch.hpp"
 #include "skybox.hpp"
-
 
 #define CUBE_FACES 6
 

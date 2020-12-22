@@ -1,3 +1,12 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file buffer.cpp
+ * @brief OpenGL Vertex Buffer Object and Index Buffer
+ *        Object abstractions
+ *********************************************************/
+
 #include "core/pch.hpp"
 #include "buffer.hpp"
 

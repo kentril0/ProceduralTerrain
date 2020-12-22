@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file proc_texture2d.cpp
+ * @brief Procedural 2D texture abstraction
+ *********************************************************/
+
 #include "core/pch.hpp"
 #include "proc_texture2d.hpp"
 

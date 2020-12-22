@@ -1,3 +1,10 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file shader.cpp
+ * @brief OpenGL Shader program abstraction
+ *********************************************************/
 
 #include "core/pch.hpp"
 #include "shader.hpp"

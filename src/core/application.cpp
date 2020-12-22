@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file application.cpp
+ * @brief Main application abstraction
+ *********************************************************/
+
 #include "pch.hpp"
 #include "application.hpp"
 

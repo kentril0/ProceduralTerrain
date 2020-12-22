@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file vertex_array.cpp
+ * @brief OpenGL Vertex Array Object abstraction
+ *********************************************************/
+
 #include "core/pch.hpp"
 #include "vertex_array.hpp"
 

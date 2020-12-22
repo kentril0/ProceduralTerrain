@@ -1,3 +1,12 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file main.cpp
+ * @brief Main file for init. of GLFW, OpenGL context, 
+ *        ImGui and Application
+ *********************************************************/
+
 #include "pch.hpp"
 #include "application.hpp"
 

@@ -1,7 +1,16 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file skybox.hpp
+ * @brief Skybox abstraction
+ *********************************************************/
+
 #pragma once
 
 #include "opengl/shader.hpp"
 #include "opengl/vertex_array.hpp"
+
 
 class Skybox
 {

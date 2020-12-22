@@ -1,9 +1,14 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @date 20.12.2020
+ * @file camera.hpp
+ * @brief FPS Camera abstraction
+ *********************************************************/
+
 #pragma once
 
 
-/**
- * @brief
- */
 class Camera
 {
 public:
