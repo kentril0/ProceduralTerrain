@@ -1,3 +1,12 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file pch.hpp
+ * @brief Precompiled Header with used inclusions and 
+ *        macro definitions
+ *********************************************************/
+
 #pragma once
 
 #include <iostream>
@@ -22,17 +31,16 @@
 #define PROJECT_NAME "Procedural Terrain Generator"
 
 // TODO turn on debug outputs
-#define DEBUG
+//#define DEBUG
 
 // TODO enable asserts
-#define ENABLE_ASSERTS
+//#define ENABLE_ASSERTS
 
 // TODO define logging level
 // Logging messages which are less severe than LOG_LEVEL will be ignored
 #define LOG_LEVEL LEVEL_OK
 
 #include "log.hpp"
-
 
 // TODO OpenGL version
 #define OPENGL_VERSION_MAJOR 4
@@ -43,5 +51,4 @@
 #define SCREEN_INIT_WIDTH  1280
 #define SCREEN_INIT_HEIGHT 720 
 
-// TODO MORE PARAMS TODO
-//
+

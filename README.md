@@ -1,19 +1,20 @@
 # OpenGL Procedural Terrain Generation
 Procedural Terrain Generation using OpenGL and C++
 
-## Current state:
-<img src="images/version_0_1.png" width="640" height="360">
-
-Controllable FPS camera suspended above a generated mesh with predefined dimensions. No texturing yet.
+<img src="images/version_1_0.png" width="640" height="360">
 
 ## Version
-0.2
+1.0
 
 ## Features
 * FPS camera
 * Skybox
 * Procedural Mesh
+* Accumulated Perlin Noise
 * GUI
+* Texturing
+* Falloff map
+* Height-based Blending
 
 ## How to compile
 
@@ -21,14 +22,14 @@ Controllable FPS camera suspended above a generated mesh with predefined dimensi
 * C++17
 * min. CMake 3.16
 * min. OpenGL 4.5 compatible GPU
-* TODO other hardware requirements
 
 In root directory of this project:
 * mkdir build && cd build
 * cmake ..
+* make
+* ./proc_ter_gen
 
 ## Used libraries
-TODO links
 * GLAD
 * GLFW3
 * GLM
@@ -36,7 +37,8 @@ TODO links
 * Tiny Obj Loader
 * ImGUI
 
-## Sources
-TODO papers, theses, etc.
+## Known Issues
+TODO
 
-
+# Author
+Martin Smutny, kentril.despair@gmail.com

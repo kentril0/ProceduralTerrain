@@ -1,3 +1,12 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file utilities.cpp
+ * @brief Utility functions, e.g. loading a file used 
+ *        across modules
+ *********************************************************/
+
 #include "pch.hpp"
 #include "utilities.hpp"
 

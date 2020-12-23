@@ -1,7 +1,16 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file skybox.hpp
+ * @brief Skybox abstraction
+ *********************************************************/
+
 #pragma once
 
 #include "opengl/shader.hpp"
 #include "opengl/vertex_array.hpp"
+
 
 class Skybox
 {
@@ -32,8 +41,8 @@ private:
     void setup_vao();
 
 private:    
-    uint32_t ID;
+    uint32_t m_id;
 
-    std::shared_ptr<Shader> shader;
-    VertexArray vao;
+    std::shared_ptr<Shader> m_shader;
+    VertexArray m_vao;
 };

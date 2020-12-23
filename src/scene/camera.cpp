@@ -1,92 +1,90 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file camera.cpp
+ * @brief FPS Camera abstraction
+ *********************************************************/
+
 #include "core/pch.hpp"
-#include "camera.hpp"
-#include <GLFW/glfw3.h>
+#include "core/application.hpp"
 
 
-const float Camera::DEFAULT_YAW       = -90.0f;
-const float Camera::DEFAULT__PITCH    = 0.0f;
-const float Camera::DEFAULT_SPEED     = 2.5f;
-const float Camera::DEFAULT_ZOOM      = 45.0f;
-const float Camera::MOUSE_SENSITIVITY = 0.1f;
-const float Camera::ZOOM_SENSITIVITY  = 45.1f;
-const float Camera::MOVE_SPEED        = 10.0f;
-
-const float Camera::DEFAULT_FOV       = 45.0f;
-const float Camera::DEFAULT_NEAR_PLANE= 0.01f;
-const float Camera::DEFAULT_FAR_PLANE = 1000.0f;
-
-const float Camera::MAX_PITCH         = 89.0f;
-const float Camera::MIN_PITCH         = -89.0f;
-
-// TODO
+// Indicies to array of active move states
 #define KEY_FORWARD     GLFW_KEY_W
 #define KEY_BACKWARD    GLFW_KEY_S
-#define KEY_LEFT        GLFW_KEY_A
 #define KEY_RIGHT       GLFW_KEY_D
+#define KEY_LEFT        GLFW_KEY_A
 
 
 Camera::Camera(float aspect_ratio, const glm::vec3& pos, const glm::vec3& up,
                const glm::vec3& front,
                float yaw, float pitch)
-  : position(pos), 
-    front(front),
-    up(up), 
-    aspect_ratio(aspect_ratio),
-    fov(glm::radians(DEFAULT_FOV)),
-    near_plane(DEFAULT_NEAR_PLANE), far_plane(DEFAULT_FAR_PLANE),
-    yaw(yaw), pitch(pitch),
-    last_x(0), last_y(0),
-    is_forward(false),
-    is_backward(false),
-    is_right(false),
-    is_left(false)
+  : m_position(pos), 
+    m_front(front),
+    m_up(up), 
+    m_aspectRatio(aspect_ratio),
+    m_fov(DEFAULT_FOV_DEG),
+    m_nearPlane(DEFAULT_NEAR_PLANE), m_farPlane(DEFAULT_FAR_PLANE),
+    m_yaw(yaw), m_pitch(pitch),
+    m_lastX(0), m_lastY(0),
+    m_firstCursor(true),
+    m_isForward(false),
+    m_isBackward(false),
+    m_isRight(false),
+    m_isLeft(false)
 {
-    
-}
 
+}
 
 void Camera::on_mouse_move(double x, double y)
 {
+    // First time the cursor entered the screen, prevents jumps
+    if (m_firstCursor)
+    {
+        m_lastX = static_cast<int>(x);
+        m_lastY = static_cast<int>(y);
+        m_firstCursor = false;
+    }
+
     // Calculate the offset movement between the last and current frame
-    float dx = float(x - last_x) * MOUSE_SENSITIVITY;
-    float dy = float(last_y - y) * MOUSE_SENSITIVITY;
+    float dx = float(x - m_lastX) * MOUSE_SENSITIVITY;
+    float dy = float(m_lastY - y) * MOUSE_SENSITIVITY;
 
-    last_x = static_cast<int>(x);
-    last_y = static_cast<int>(y);
+    m_lastX = static_cast<int>(x);
+    m_lastY = static_cast<int>(y);
 
-    pitch += dy;
-    if (pitch > MAX_PITCH)
-        pitch = MAX_PITCH;
-    else if (pitch < MIN_PITCH)
-        pitch = MIN_PITCH;
+    m_pitch += dy;
+    m_pitch = glm::clamp(m_pitch, MIN_PITCH_DEG, MAX_PITCH_DEG);
+    
+    m_yaw = glm::mod(m_yaw + dx, MAX_YAW_DEG);
 
-    yaw = glm::mod(yaw + dx, 360.0f);
+    update();
+}
 
+void Camera::update()
+{
     // calculate the new front vector
-    front.x = cosf(glm::radians(yaw)) * cosf(glm::radians(pitch));
-    front.y = sinf(glm::radians(pitch));
-    front.z = sinf(glm::radians(yaw)) * cosf(glm::radians(pitch));
+    m_front.x = cosf(glm::radians(m_yaw)) * cosf(glm::radians(m_pitch));
+    m_front.y = sinf(glm::radians(m_pitch));
+    m_front.z = sinf(glm::radians(m_yaw)) * cosf(glm::radians(m_pitch));
 
-    front = glm::normalize(front);
+    m_front = glm::normalize(m_front);
 
     // re-calculate the right and up vector
     // normalize because their length gets closer to 0 the more you look up or down
     //  -> results in slower movement
-    right = glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
-    up    = glm::normalize(glm::cross(right, front));
+    m_right = glm::normalize(glm::cross(m_front, WORLD_UP));
+    m_up    = glm::normalize(glm::cross(m_right, m_front));
 }
 
 void Camera::update(float dt)
 {
     float velocity = MOVE_SPEED * dt;
-    if (is_forward)
-        position += front * velocity;
-    if (is_backward)
-        position -= front * velocity;
-    if (is_right)
-        position += right * velocity;
-    if (is_left)
-        position -= right * velocity;
+    m_position += m_isForward  * m_front * velocity;
+    m_position -= m_isBackward * m_front * velocity;
+    m_position += m_isRight    * m_right * velocity;
+    m_position -= m_isLeft     * m_right * velocity;
 }
 
 void Camera::on_mouse_button(int button, int action, int mods)
@@ -94,30 +92,34 @@ void Camera::on_mouse_button(int button, int action, int mods)
 
 }
 
-void Camera::on_key_pressed(float dt, int key, int scancode, int action, int mods)
+void Camera::on_key_pressed(int key, int action)
 {
     if (action == GLFW_PRESS)
-    {
-        if (key == KEY_FORWARD)
-            is_forward = true;
-        else if (key == KEY_BACKWARD)
-            is_backward = true;
-        else if (key == KEY_RIGHT)
-            is_right = true;
-        else if (key == KEY_LEFT)
-            is_left = true;
+    {           
+        if (key == KEY_CAM_FORWARD)
+            m_isForward = true;
+        else if (key == KEY_CAM_BACKWARD)
+            m_isBackward = true;
+        else if (key == KEY_CAM_RIGHT)
+            m_isRight = true;
+        else if (key == KEY_CAM_LEFT)
+            m_isLeft = true;
+        else if (key == KEY_CAM_RCURSOR)
+        {
+            m_isForward = m_isBackward = m_isRight = m_isLeft = false;
+            m_firstCursor = true;
+        }
     }
     else if (action == GLFW_RELEASE)
     {
-        if (key == KEY_FORWARD)
-            is_forward = false;
-        else if (key == KEY_BACKWARD)
-            is_backward = false;
-        else if (key == KEY_RIGHT)
-            is_right = false;
-        else if (key == KEY_LEFT)
-            is_left = false;
+        if (key == KEY_CAM_FORWARD)
+            m_isForward = false;
+        else if (key == KEY_CAM_BACKWARD)
+            m_isBackward = false;
+        else if (key == KEY_CAM_RIGHT)
+            m_isRight = false;
+        else if (key == KEY_CAM_LEFT)
+            m_isLeft = false;        
     }
 }
-
 

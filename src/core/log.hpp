@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file log.hpp
+ * @brief Logging and debugging functions
+ *********************************************************/
+
 #pragma once
 
 //#include <iostream>

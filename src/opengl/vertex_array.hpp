@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file vertex_array.cpp
+ * @brief OpenGL Vertex Array Object abstraction
+ *********************************************************/
+
 #pragma once
 
 #include "buffer.hpp"
@@ -52,12 +60,16 @@ public:
     ~VertexArray();
 
     void bind() const;
+
     void unbind() const;
 
-    void add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, bool instanced = false);
+    // @param instanced Whether vertex attributes should be instanced
+    void add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, 
+                           bool instanced = false);
+
     void set_index_buffer(const std::shared_ptr<IndexBuffer>& ibo);
 
-    const uint32_t ID() { return id; }
+    const uint32_t ID() { return m_id; }
 
     bool has_vertex_buffers() const { return !vertex_buffers.empty(); }
 
@@ -73,10 +85,20 @@ public:
         return index_buffer;
     }
 
+    /** @brief Frees all the assigned vertex buffers */
+    void clear_buffers() { vertex_buffers.clear(); binding_index = 0; }
+
+    /** @brief Frees the assigned index buffer */
+    void clear_index() { index_buffer.reset(); }
+
+    /** @brief Frees both the assigned vertex bufferss and the index buffer */
+    void clear() { clear_buffers(); clear_index(); }
+
 private:
-    uint32_t id;
+    uint32_t m_id;
     uint32_t binding_index = 0;
 
     std::vector<std::shared_ptr<VertexBuffer>> vertex_buffers;
     std::shared_ptr<IndexBuffer> index_buffer;
 };
+

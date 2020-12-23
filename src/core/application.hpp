@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file application.hpp
+ * @brief Main application abstraction
+ *********************************************************/
+
 #pragma once
 
 #include <GLFW/glfw3.h>
@@ -9,6 +17,18 @@
 #include "scene/skybox.hpp"
 #include "scene/camera.hpp"
 #include "scene/terrain.hpp"
+
+
+/**@brief Controls used in application */
+enum Controls
+{
+    KEY_TOGGLE_MENU  = GLFW_KEY_ESCAPE,
+    KEY_CAM_FORWARD  = GLFW_KEY_W,
+    KEY_CAM_BACKWARD = GLFW_KEY_S,
+    KEY_CAM_RIGHT    = GLFW_KEY_D,
+    KEY_CAM_LEFT     = GLFW_KEY_A,
+    KEY_CAM_RCURSOR  = KEY_TOGGLE_MENU
+};
 
 
 /**
@@ -40,14 +60,100 @@ private:
 
     void set_vsync(bool enabled);
 
+    void call_registered(int key, int action)
+    { 
+        const auto& it = m_callbackMap.find({key,action,m_state});
+        if (it != m_callbackMap.end())
+        {
+            const auto& vec_callbacks = it->second;
+            for (const auto& c : vec_callbacks)
+                (this->*c)();
+        }
+    }
+
+    // Functions modifying application state
+    void set_state(int s) { DERR("New state: " << s); m_state = s; }
+
+    void set_state_modify();    ///< Shows interface for modifications
+    void set_state_freefly();   ///< Hides interface and enables flying w/ camera
+
+    // ImGui functions
+    void show_interface();
+
+    void status_window();
+
+    void showTexture(uint32_t texture_id, const glm::uvec2& texSize,
+                     const float w, const float h);
+
+    // Camera callbacks
+    void camera_key_pressed() { m_camera->on_key_pressed(m_key, m_keyAction); }
+    void camera_forward()     { m_camera->key_forward(m_keyAction); }
+    void camera_backward()    { m_camera->key_backward(m_keyAction); }
+    void camera_right()       { m_camera->key_right(m_keyAction); }
+    void camera_left()        { m_camera->key_left(m_keyAction); }
+    void camera_reset()       { m_camera->key_reset(m_keyAction); }
+
 private:
-    //static GLFWwindow* window_obj;
-    size_t width;
-    size_t height;
+    // ----------------------------------------------------------------------------
+    // Typedefs
+    // ----------------------------------------------------------------------------
+    typedef void (Application::*Callback)(void);
+    typedef std::vector<Callback> callbacks;
+
+    /** @brief Used as a key to a map of callbacks, that are called whenever a key
+     *         with action and during a state is pressed. */
+    struct CallbackKey
+    {
+        int key;            ///< The GLFW_KEY_* - a.k.a. key on a keyboard
+        int action;         ///< Usually a GLFW_PRESS or GLFW_RELEASE
+        int state;          ///< The application state
+
+        CallbackKey(int k, int a, int s) : key(k), action(a), state(s) {}
+        bool operator==(const CallbackKey &other) const
+        {
+            return (key == other.key
+                    && action == other.action
+                    && state == other.state);
+        }
+    };
+
+    // Make the CallbackKey type hashable 
+    struct Callback_hash
+    {
+        std::size_t operator()(const CallbackKey& k) const
+        {
+            // Compute individual hash values and combine them 
+            //  using XOR and bit shifting:
+            return ((std::hash<int>()(k.key) 
+                     ^ (std::hash<int>()(k.action) << 1)) >> 1) 
+                     ^ (std::hash<int>()(k.state) << 1);
+        }
+    };
+
+    // ----------------------------------------------------------------------------
+    // Data members 
+    // ----------------------------------------------------------------------------
+    GLFWwindow* m_window;
+
+    size_t m_width;
+    size_t m_height;
 
     // Timestamps
-    double lastFrame, framestamp, deltaTime;
-    uint32_t frames;
+    double m_lastFrame, m_framestamp, m_deltaTime;
+    uint32_t m_frames;
+
+    // Maps the key, action and state to callback function
+    std::unordered_map<CallbackKey, callbacks, Callback_hash> m_callbackMap;
+
+    int m_key, m_keyAction;        ///< Keyboard key and action
+
+    enum States     ///< Application states, determines 
+    {
+        STATE_MODIFY,   ///< GUI is shown and allows for modifications
+        STATE_FREEFLY   ///< GUI is hidden, camera is moving freely
+    };
+
+    int m_state;    ///< Current app state
 
     // ----------------------------------------------------------------------------
     // Scene
@@ -55,12 +161,18 @@ private:
     // TODO resource manager?
     // TODO active camera, walk camera
     // ----------------------------------------------------------------------------
-    std::unique_ptr<Camera> camera;
+    glm::mat4 m_projView;
 
-    std::shared_ptr<Shader> sh_skybox;
-    std::unique_ptr<Skybox> skybox;
+    std::unique_ptr<Camera> m_camera;
+    void cameraSetPresetTop();
+    void cameraSetPresetFront();
+    void cameraSetPresetSideWays();
 
-    std::unique_ptr<Shader> sh_terrain;
-    std::unique_ptr<Terrain> terrain;
+    std::unique_ptr<Skybox> m_skybox;
+
+    std::unique_ptr<Terrain> m_terrain;
+    const uint32_t TERRAIN_INIT_SIZE = 100;
+    bool m_wireframe = false;
+
 };
 

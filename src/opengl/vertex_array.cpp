@@ -1,3 +1,11 @@
+/**********************************************************
+ * < Procedural Terrain Generator >
+ * @author Martin Smutny, kentril.despair@gmail.com
+ * @date 20.12.2020
+ * @file vertex_array.cpp
+ * @brief OpenGL Vertex Array Object abstraction
+ *********************************************************/
+
 #include "core/pch.hpp"
 #include "vertex_array.hpp"
 
@@ -30,19 +38,23 @@ static GLenum element_to_shader_type(ElementType type)
 
 VertexArray::VertexArray()
 {
-    glCreateVertexArrays(1, &id);
-    DERR("VAO default CONSTR: " << id);
+    glCreateVertexArrays(1, &m_id);
+    DERR("VAO default CONSTR: " << m_id);
 }
 
 VertexArray::~VertexArray()
 {
     DERR("VAO default DESR");
-    glDeleteVertexArrays(1, &id);
+    glDeleteVertexArrays(1, &m_id);
+
+    // TODO Dangerous??
+    clear_buffers();
+    clear_index();
 }
 
 void VertexArray::bind() const
 {
-    glBindVertexArray(id);
+    glBindVertexArray(m_id);
 }
 
 void VertexArray::unbind() const
@@ -50,9 +62,10 @@ void VertexArray::unbind() const
     glBindVertexArray(0);
 }
 
-void VertexArray::add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, bool instanced)
+void VertexArray::add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, 
+                                    bool instanced)
 {
-    const auto& layout = vbo->get_layout();
+    const auto& layout = vbo->layout();
     massert(layout.get_elements().size(), "Vertex buffer has no buffer elements!");
 
     for (const auto& e : layout)
@@ -76,20 +89,20 @@ void VertexArray::add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, bo
             case ElementType::Bool:  
             {
                 // TODO offset x relativeoffset
-                glVertexArrayVertexBuffer(id, binding_index, vbo->get_ID(), 
+                glVertexArrayVertexBuffer(m_id, binding_index, vbo->ID(), 
                                           0, layout.get_stride());
-                glEnableVertexArrayAttrib(id, binding_index);
+                glEnableVertexArrayAttrib(m_id, binding_index);
 
-                glVertexArrayAttribFormat(id, binding_index, 
+                glVertexArrayAttribFormat(m_id, binding_index, 
                                           e.components_count(), 
                                           element_to_shader_type(e.type),
                                           e.normalized ? GL_TRUE : GL_FALSE, 
                                           e.offset);
-                glVertexArrayAttribBinding(id, binding_index, binding_index);
+                glVertexArrayAttribBinding(m_id, binding_index, binding_index);
 
                 if (instanced)
                 {
-                    glBindVertexArray(id);
+                    glBindVertexArray(m_id);
                     glVertexAttribDivisor(binding_index, 1);    // TODO ver 4.5??
                     glBindVertexArray(0);
                 }
@@ -100,20 +113,20 @@ void VertexArray::add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, bo
             case ElementType::Mat3:  
             case ElementType::Mat4:  
             {
-                glBindVertexArray(id);
+                glBindVertexArray(m_id);
                 uint8_t count = e.components_count();
                 for (uint8_t i = 0; i < count; ++i)
                 {
-                    glVertexArrayVertexBuffer(id, binding_index, vbo->get_ID(), 
+                    glVertexArrayVertexBuffer(m_id, binding_index, vbo->ID(), 
                                               0, layout.get_stride());
-                    glEnableVertexArrayAttrib(id, binding_index);
+                    glEnableVertexArrayAttrib(m_id, binding_index);
 
-                    glVertexArrayAttribFormat(id, binding_index, 
+                    glVertexArrayAttribFormat(m_id, binding_index, 
                                               count, 
                                               element_to_shader_type(e.type),
                                               e.normalized ? GL_TRUE : GL_FALSE, 
                                               e.offset + i * count * sizeof(float));
-                    glVertexArrayAttribBinding(id, binding_index, binding_index);
+                    glVertexArrayAttribBinding(m_id, binding_index, binding_index);
                     // Per instance (GLSL vec4 limitation)
                     glVertexAttribDivisor(binding_index, 1);
 
@@ -132,8 +145,7 @@ void VertexArray::add_vertex_buffer(const std::shared_ptr<VertexBuffer>& vbo, bo
 
 void VertexArray::set_index_buffer(const std::shared_ptr<IndexBuffer>& ibo)
 {
-    glVertexArrayElementBuffer(id, ibo->get_ID());
-
+    glVertexArrayElementBuffer(m_id, ibo->ID());
     index_buffer = ibo;
 }
 
