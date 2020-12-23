@@ -22,7 +22,7 @@ Shader::Shader(const char *vert_src, const char *frag_src, const char *geom_src)
 
 void Shader::use()
 {
-    glUseProgram(this->ID);
+    glUseProgram(m_id);
     //return *this;
 }
 
@@ -43,7 +43,7 @@ uint32_t Shader::create_shader(const char *source, uint32_t type)
 
 void Shader::compile(const char *vert_src, const char *frag_src, const char *geom_src)
 {
-    LOG_INFO("Compiling: " << vert_src << ' ' << frag_src);
+    LOG_INFO("Compiling sources: " << vert_src << ' ' << frag_src);
     GLuint sh_vert, sh_frag, sh_geom;
 
     // Vertex shader
@@ -55,17 +55,17 @@ void Shader::compile(const char *vert_src, const char *frag_src, const char *geo
         sh_geom = create_shader(geom_src, GL_GEOMETRY_SHADER);
     
     // Create program
-    this->ID = glCreateProgram();
+    m_id = glCreateProgram();
 
     // Attach shaders
-    glAttachShader(this->ID, sh_vert);
-    glAttachShader(this->ID, sh_frag);
+    glAttachShader(m_id, sh_vert);
+    glAttachShader(m_id, sh_frag);
     if (geom_src != nullptr)
-        glAttachShader(this->ID, sh_geom);
+        glAttachShader(m_id, sh_geom);
 
     // Link the program and check for any link errors
-    glLinkProgram(this->ID);
-    check_errors(this->ID, LINK_ERRORS);
+    glLinkProgram(m_id);
+    check_errors(m_id, LINK_ERRORS);
 
     // Clean up after linked, no longer needed
     glDeleteShader(sh_vert);
@@ -73,55 +73,57 @@ void Shader::compile(const char *vert_src, const char *frag_src, const char *geo
     if (geom_src != nullptr)
         glDeleteShader(sh_geom);
 
-    glDetachShader(this->ID, sh_vert);
-    glDetachShader(this->ID, sh_frag);
+    glDetachShader(m_id, sh_vert);
+    glDetachShader(m_id, sh_frag);
     if (geom_src != nullptr)
-        glDetachShader(this->ID, sh_geom);
+        glDetachShader(m_id, sh_geom);
 }
 
 void Shader::set_float(const char *name, float value)
 {
-    glUniform1f(glGetUniformLocation(this->ID, name), value);
+    glUniform1f(glGetUniformLocation(m_id, name), value);
 }
 
 void Shader::set_int(const char *name, int value)
 {
-    glUniform1i(glGetUniformLocation(this->ID, name), value);
+    glUniform1i(glGetUniformLocation(m_id, name), value);
 }
 
 void Shader::set_vec2(const char *name, float v0, float v1)
 {
-    glUniform2f(glGetUniformLocation(this->ID, name), v0, v1);
+    glUniform2f(glGetUniformLocation(m_id, name), v0, v1);
 }
 
 void Shader::set_vec2(const char *name, const glm::vec2 &value)
 {
-    glUniform2f(glGetUniformLocation(this->ID, name), value.x, value.y);
+    glUniform2f(glGetUniformLocation(m_id, name), value.x, value.y);
 }
 
 void Shader::set_vec3(const char *name, float v0, float v1, float v2)
 {
-    glUniform3f(glGetUniformLocation(this->ID, name), v0, v1, v2);
+    glUniform3f(glGetUniformLocation(m_id, name), v0, v1, v2);
 }
 
 void Shader::set_vec3(const char *name, const glm::vec3 &value)
 {
-    glUniform3f(glGetUniformLocation(this->ID, name), value.x, value.y, value.z);
+    glUniform3f(glGetUniformLocation(m_id, name), value.x, value.y, value.z);
 }
 
 void Shader::set_vec4(const char *name, float v0, float v1, float v2, float v3)
 {
-    glUniform4f(glGetUniformLocation(this->ID, name), v0, v1, v2, v3);
+    glUniform4f(glGetUniformLocation(m_id, name), v0, v1, v2, v3);
 }
 
 void Shader::set_vec4(const char *name, const glm::vec4 &value)
 {
-    glUniform4f(glGetUniformLocation(this->ID, name), value.x, value.y, value.z, value.w);
+    glUniform4f(glGetUniformLocation(m_id, name), 
+                value.x, value.y, value.z, value.w);
 }
 
 void Shader::set_mat4(const char *name, const glm::mat4 &matrix)
 {
-    glUniformMatrix4fv(glGetUniformLocation(this->ID, name), 1, false, glm::value_ptr(matrix));
+    glUniformMatrix4fv(glGetUniformLocation(m_id, name), 1, false, 
+                       glm::value_ptr(matrix));
 }
 
 void Shader::check_errors(uint32_t object, int type)

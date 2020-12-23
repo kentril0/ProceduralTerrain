@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file buffer.hpp
  * @brief OpenGL Vertex Buffer Object and Index Buffer
@@ -293,14 +293,14 @@ public:
      * @brief Set layout, a description of data that consists of buffer elements.
      * @param layout BufferLayout type
      */
-    void set_layout(const BufferLayout& layout) { this->layout = layout; }
+    void set_layout(const BufferLayout& layout) { m_layout = layout; }
 
-    uint32_t            get_ID() const { return ID; }
-    const BufferLayout& get_layout() const { return layout; }
+    uint32_t            ID() const { return m_id; }
+    const BufferLayout& layout() const { return m_layout; }
 
 private:
-    uint32_t ID;
-    BufferLayout layout;
+    uint32_t m_id;
+    BufferLayout m_layout;
 };
 
 
@@ -318,12 +318,12 @@ public:
     void bind() const;
     void unbind() const;
 
-    uint32_t get_ID() const { return ID; };
-    uint32_t get_count() const { return count; };
+    uint32_t ID() const { return m_id; };
+    uint32_t count() const { return m_count; };
 
 private:
-    uint32_t ID;
-    uint32_t count;
+    uint32_t m_id;
+    uint32_t m_count;
 };
 
 

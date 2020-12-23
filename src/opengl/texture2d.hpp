@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file texture2d.hpp
  * @brief OpenGL 2D texture abstraction
@@ -23,10 +23,19 @@ public:
 	 */
 	Texture2D(bool mipmaps = true);
 
+    /**
+     * @param alpha Whether alpha channel is used
+     */
 	Texture2D(const std::string& filename, 
 			  bool alpha = true, 
 			  bool mipmaps = true); 
 
+	/**
+	 * @brief Creates 2D texture object.
+     * @param data Supplied image data
+     * @param w Image width
+     * @param h Image height
+	 */
 	Texture2D(const uint8_t* data, 
               uint32_t w, uint32_t h,
 			  bool alpha = true, 
@@ -42,7 +51,7 @@ public:
 	void load(const std::string& filename, bool alpha = true);
 
 	/**
-	 * @brief Upload data to the texture object.
+	 * @brief Upload BYTE data to the texture object.
 	 * @param data Data in the image format as already set.
      * @param width Width of the data
      * @param height Height of the data
@@ -97,14 +106,14 @@ public:
 
     //------------------------------------------------------------
 	// Getters
-	uint32_t ID() const { return id; }
+	uint32_t ID() const { return m_id; }
 
 	glm::uvec2 size() const { return glm::uvec2(m_width, m_height); }
 private:
     void set_filtering();
 
 private:
-	uint32_t id;
+	uint32_t m_id;
 
 	uint32_t m_width, m_height;
 	uint32_t m_internal_format, m_image_format;

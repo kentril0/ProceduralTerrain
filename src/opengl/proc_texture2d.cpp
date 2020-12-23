@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file proc_texture2d.cpp
  * @brief Procedural 2D texture abstraction
@@ -17,8 +17,7 @@ ProceduralTex2D::ProceduralTex2D(uint32_t res, Noise::Type t)
     m_texture(true),
     m_changed(false)
 {
-
-    m_pixelSize = 3;
+    m_pixelSize = CHANNELS_RGB;
     m_texture.set_internal_format(GL_RGB8);
     m_texture.set_image_format(GL_RGB);
     m_texture.set_clamp_to_edge();

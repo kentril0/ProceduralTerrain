@@ -1,8 +1,10 @@
 # OpenGL Procedural Terrain Generation
 Procedural Terrain Generation using OpenGL and C++
 
-# Author
-Martin Smutny, kentril.despair@gmail.com
+<img src="images/version_1_0.png" width="640" height="360">
+
+## Version
+1.0
 
 ## Features
 * FPS camera
@@ -35,4 +37,8 @@ In root directory of this project:
 * Tiny Obj Loader
 * ImGUI
 
+## Known Issues
+TODO
 
+# Author
+Martin Smutny, kentril.despair@gmail.com

@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file skybox.cpp
  * @brief Skybox abstraction
@@ -14,7 +14,7 @@
 
 Skybox::Skybox(const std::shared_ptr<Shader>& sh, 
                const std::vector<const char*> faces, bool alpha)
-  : shader(sh)
+  : m_shader(sh)
 {
     // Loads the textures and sets them up as cubemap faces
     setup_cubemap(faces, alpha);
@@ -29,7 +29,7 @@ Skybox::Skybox(const std::shared_ptr<Shader>& sh,
 
 Skybox::~Skybox()
 {
-    glDeleteTextures(1, &ID);
+    glDeleteTextures(1, &m_id);
 }
 
 
@@ -37,8 +37,8 @@ void Skybox::setup_cubemap(const std::vector<const char*>& faces, bool alpha)
 {
     massert(faces.size() == CUBE_FACES, "Incorrect number of skybox faces");
 
-    glGenTextures(1, &ID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    glGenTextures(1, &m_id);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
 
     // Load each face and setup its texture paramters
     int width, height, channels;
@@ -129,7 +129,7 @@ void Skybox::setup_vao()
         {ElementType::Float3, "Position"}})
     );
 
-    vao.add_vertex_buffer(vbo);
+    m_vao.add_vertex_buffer(vbo);
 }
 
 void Skybox::render(const glm::mat4& view, const glm::mat4& proj) const
@@ -139,16 +139,16 @@ void Skybox::render(const glm::mat4& view, const glm::mat4& proj) const
     // Changes depth function to render the skybox as the furthest object
     glDepthFunc(GL_LEQUAL);
     
-    shader->use();
+    m_shader->use();
 
     // Remove the translation part from the view matrix
     glm::mat4 ts_view = glm::mat4(glm::mat3(view));
 
-    shader->set_mat4("projview",  proj * ts_view);
+    m_shader->set_mat4("projview",  proj * ts_view);
     
-    vao.bind();
+    m_vao.bind();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_id);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glDepthFunc(GL_LESS);

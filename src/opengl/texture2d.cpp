@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file texture2d.cpp
  * @brief OpenGL 2D texture abstraction
@@ -19,7 +19,7 @@ Texture2D::Texture2D(bool mps)
       m_filterMin(GL_LINEAR_MIPMAP_LINEAR),
       m_filterMag(GL_LINEAR)
 {
-    glCreateTextures(GL_TEXTURE_2D, 1, &id);
+    glCreateTextures(GL_TEXTURE_2D, 1, &m_id);
 }
 
 Texture2D::Texture2D(const std::string& filename, bool alpha, bool mps)
@@ -32,7 +32,7 @@ Texture2D::Texture2D(const std::string& filename, bool alpha, bool mps)
       m_filterMag(GL_LINEAR)
 {
     DERR("Texture def CONSTR");
-    glCreateTextures(GL_TEXTURE_2D, 1, &id);
+    glCreateTextures(GL_TEXTURE_2D, 1, &m_id);
 
     load(filename, alpha);
 }
@@ -47,17 +47,17 @@ Texture2D::Texture2D(const uint8_t* data, uint32_t w, uint32_t h, bool alpha, bo
       m_filterMag(GL_LINEAR)
 {
     DERR("Texture def CONSTR");
-    glCreateTextures(GL_TEXTURE_2D, 1, &id);
+    glCreateTextures(GL_TEXTURE_2D, 1, &m_id);
 
     // Specify IMMUTABLE storage for all levels of a 2D array texture
     //  Create texture with log2 of width levels
-    glTextureStorage2D(id,
+    glTextureStorage2D(m_id,
                        (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
                        m_internal_format,           // sized format of stored data *RGBA8
                        m_width, m_height);          // in texels
 
     // Specify a 2D texture subimage
-    glTextureSubImage2D(id,                 // texture id
+    glTextureSubImage2D(m_id,               // texture id
                         0,                  // level
                         0, 0,               // xoffset, yoffset in the texture array
                         m_width, m_height,  // width, height of the subimage
@@ -72,7 +72,7 @@ Texture2D::Texture2D(const uint8_t* data, uint32_t w, uint32_t h, bool alpha, bo
 Texture2D::~Texture2D()
 {
     DERR("Texture def DESTR");
-    glDeleteTextures(1, &id);
+    glDeleteTextures(1, &m_id);
 }
 
 void Texture2D::load(const std::string& filename, bool alpha)
@@ -86,13 +86,13 @@ void Texture2D::load(const std::string& filename, bool alpha)
 
     // Specify IMMUTABLE storage for all levels of a 2D array texture
     //  Create texture with log2 of width levels
-    glTextureStorage2D(id,
+    glTextureStorage2D(m_id,
                        (m_mipmaps ? std::log2(m_width) : 1),    // number of texture levels
                        m_internal_format,           // sized format of stored data *RGBA8
                        m_width, m_height);          // in texels
 
     // Specify a 2D texture subimage
-    glTextureSubImage2D(id,                 // texture id
+    glTextureSubImage2D(m_id,               // texture id
                         0,                  // level
                         0, 0,               // xoffset, yoffset in the texture array
                         m_width, m_height,  // width, height of the subimage
@@ -158,7 +158,7 @@ void Texture2D::upload(const float* data, int w, int h)
 
 void Texture2D::bind() const
 {
-    glBindTexture(GL_TEXTURE_2D, id);
+    glBindTexture(GL_TEXTURE_2D, m_id);
 }
 
 void Texture2D::unbind() const
@@ -168,7 +168,7 @@ void Texture2D::unbind() const
 
 void Texture2D::bind_unit(uint32_t unit) const
 {
-    glBindTextureUnit(unit, id);
+    glBindTextureUnit(unit, m_id);
 }
 
 void Texture2D::set_repeat()
@@ -189,30 +189,30 @@ void Texture2D::set_clamp_to_edge()
 void Texture2D::set_clamp_to_border(const glm::vec4& border_color)
 {
 	set_custom_wrap(GL_CLAMP_TO_BORDER);
-	glTextureParameterfv(id, GL_TEXTURE_BORDER_COLOR, glm::value_ptr(border_color));
+	glTextureParameterfv(m_id, GL_TEXTURE_BORDER_COLOR, glm::value_ptr(border_color));
 }
 
 void Texture2D::set_custom_wrap(uint32_t wrap)
 {
-    glTextureParameteri(id, GL_TEXTURE_WRAP_S, wrap);
-    glTextureParameteri(id, GL_TEXTURE_WRAP_T, wrap);	
+    glTextureParameteri(m_id, GL_TEXTURE_WRAP_S, wrap);
+    glTextureParameteri(m_id, GL_TEXTURE_WRAP_T, wrap);	
 }
 
 void Texture2D::set_custom_wrap(uint32_t wrap_s, uint32_t wrap_t)
 {
-    glTextureParameteri(id, GL_TEXTURE_WRAP_S, wrap_s);
-    glTextureParameteri(id, GL_TEXTURE_WRAP_T, wrap_t);	
+    glTextureParameteri(m_id, GL_TEXTURE_WRAP_S, wrap_s);
+    glTextureParameteri(m_id, GL_TEXTURE_WRAP_T, wrap_t);	
 }
 
 void Texture2D::set_filtering()
 {
-    glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, m_filterMin);
-    glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, m_filterMag);
+    glTextureParameteri(m_id, GL_TEXTURE_MIN_FILTER, m_filterMin);
+    glTextureParameteri(m_id, GL_TEXTURE_MAG_FILTER, m_filterMag);
 }
 
 void Texture2D::gen_mipmap()
 {
-	glGenerateTextureMipmap(id);
+	glGenerateTextureMipmap(m_id);
     set_filtering();
 }
 

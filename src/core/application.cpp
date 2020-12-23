@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file application.cpp
  * @brief Main application abstraction
@@ -16,12 +16,12 @@
 
 // --------------------------------------------------------------------------
 Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_height) 
-  : window(w),
-    width(initial_width), 
-    height(initial_height),
-    state(STATE_MODIFY)
+  : m_window(w),
+    m_width(initial_width), 
+    m_height(initial_height),
+    m_state(STATE_MODIFY)
 {
-    LOG_INFO("Screen Dimensions: " << width << " x " << height);
+    LOG_INFO("Screen Dimensions: " << m_width << " x " << m_height);
 
     // "Show" the cursor
     glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -29,20 +29,20 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     // --------------------------------------------------------------------------
     // TODO initialize TODO
     // --------------------------------------------------------------------------
-    camera = std::make_unique<Camera>(float(width) / float(height));
+    m_camera = std::make_unique<Camera>(float(m_width) / float(m_height));
     cameraSetPresetSideWays();
     
-    std::shared_ptr<Shader> sh_skybox = std::make_shared<Shader>(
+    std::shared_ptr<Shader> shSkybox = std::make_shared<Shader>(
                                          "shaders/draw_skybox.vs", 
                                          "shaders/draw_skybox.fs");
-    skybox = std::make_unique<Skybox>(sh_skybox, 
-                                      std::initializer_list<const char*>{
-                                       "images/skybox/right.jpg",
-                                       "images/skybox/left.jpg",
-                                       "images/skybox/top.jpg",
-                                       "images/skybox/bottom.jpg",
-                                       "images/skybox/front.jpg",
-                                       "images/skybox/back.jpg"});
+    m_skybox = std::make_unique<Skybox>(shSkybox, 
+                                        std::initializer_list<const char*>{
+                                         "images/skybox/right.jpg",
+                                         "images/skybox/left.jpg",
+                                         "images/skybox/top.jpg",
+                                         "images/skybox/bottom.jpg",
+                                         "images/skybox/front.jpg",
+                                         "images/skybox/back.jpg"});
 
     std::shared_ptr<Shader> shTerSingle = std::make_shared<Shader>(
                                           "shaders/draw_terrain.vs",
@@ -50,26 +50,26 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     std::shared_ptr<Shader> shTerMulti = std::make_shared<Shader>(
                                           "shaders/terrain_multitex.vs",
                                           "shaders/terrain_multitex.fs");
-    terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
-                                        0.2f, 2.f);
-    terrain->addShader(shTerSingle);
-    terrain->addShader(shTerMulti);
+    m_terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
+                                          0.2f, 2.f);
+    m_terrain->addShader(shTerSingle);
+    m_terrain->addShader(shTerMulti);
 
     // Load textures
-    terrain->loadTexture("images/waterDeep.jpg");
-    terrain->loadTexture("images/water.jpg");
-    terrain->loadTexture("images/sand.jpg");
-    terrain->loadTexture("images/grass.jpg");
-    terrain->loadTexture("images/trees.jpg");
-    terrain->loadTexture("images/rocks.jpg");
-    terrain->loadTexture("images/rocksHigh.jpg");
-    terrain->loadTexture("images/snow.jpg");
-    terrain->initTextureArray();
+    m_terrain->loadTexture("images/waterDeep.jpg");
+    m_terrain->loadTexture("images/water.jpg");
+    m_terrain->loadTexture("images/sand.jpg");
+    m_terrain->loadTexture("images/grass.jpg");
+    m_terrain->loadTexture("images/trees.jpg");
+    m_terrain->loadTexture("images/rocks.jpg");
+    m_terrain->loadTexture("images/rocksHigh.jpg");
+    m_terrain->loadTexture("images/snow.jpg");
+    m_terrain->initTextureArray();
 
     // --------------------------------------------------------------------------
     // Register callbacks
     // --------------------------------------------------------------------------
-    callback_map = {
+    m_callbackMap = {
         // Key,             Action,     State
         { {KEY_TOGGLE_MENU, GLFW_PRESS, STATE_MODIFY}, {&Application::set_state_freefly} },
         { {KEY_TOGGLE_MENU, GLFW_PRESS, STATE_FREEFLY}, {&Application::set_state_modify, 
@@ -96,8 +96,8 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     // --------------------------------------------------------------------------
     // Get current timestamp - prepare for main loop
     // --------------------------------------------------------------------------
-    lastFrame = glfwGetTime();
-    framestamp = lastFrame;
+    m_lastFrame = glfwGetTime();
+    m_framestamp = m_lastFrame;
 }
 
 Application::~Application()
@@ -111,14 +111,14 @@ void Application::loop()
     // Calculate delta time
     // --------------------------------------------------------------------------
     double currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
+    m_deltaTime = currentFrame - m_lastFrame;
+    m_lastFrame = currentFrame;
 
     // Frametime and FPS counter, updates once per 1 second
-    if (currentFrame - framestamp > 1.0f)
+    if (currentFrame - m_framestamp > 1.0f)
     {
-        framestamp += 1.0f;
-        frames = 0;
+        m_framestamp += 1.0f;
+        m_frames = 0;
     }
 
     update();
@@ -133,7 +133,7 @@ void Application::render()
     // --------------------------------------------------------------------------
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glViewport(0, 0, this->width, this->height);
+    glViewport(0, 0, m_width, m_height);
 
     // --------------------------------------------------------------------------
     // Sart the Dear ImGUI frame
@@ -145,23 +145,23 @@ void Application::render()
     // Draw the scene
     // --------------------------------------------------------------------------
     // Get projection and view matrices defined by camera
-    glm::mat4 proj = camera->get_proj_matrix();
-    glm::mat4 view = camera->get_view_matrix();
-    projView = proj * view;
+    glm::mat4 proj = m_camera->proj_matrix();
+    glm::mat4 view = m_camera->view_matrix();
+    m_projView = proj * view;
 
     // Render the terrain
-    if (m_wireframe)
+    if (!m_wireframe)
+        m_terrain->render(m_projView);
+    else
+    {
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-
-    terrain->render(projView);
-
-    if (m_wireframe)
+            m_terrain->render(m_projView);
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    }
 
     // Render skybox as last
-    skybox->render(view, proj);
+    m_skybox->render(view, proj);
 
-    
     // --------------------------------------------------------------------------
     // ImGUI render
     // --------------------------------------------------------------------------
@@ -175,26 +175,26 @@ void Application::render()
     }
     // --------------------------------------------------------------------------
 
-    frames++;
+    m_frames++;
 }
 
 void Application::update()
 {
-    camera->update(deltaTime);
+    m_camera->update(m_deltaTime);
 }
 
 
 void Application::on_resize(GLFWwindow *window, int width, int height)
 {
-    this->width = width;
-    this->height = height;
+    m_width = width;
+    m_height = height;
     DERR("SCREEN RESIZE");
 }
 
 void Application::on_mouse_move(GLFWwindow *window, double x, double y) 
 { 
-    if (state == STATE_FREEFLY)
-        camera->on_mouse_move(x, y);
+    if (m_state == STATE_FREEFLY)
+        m_camera->on_mouse_move(x, y);
 }
 
 void Application::on_mouse_pressed(GLFWwindow *window, int button, int action, int mods)
@@ -204,12 +204,13 @@ void Application::on_mouse_pressed(GLFWwindow *window, int button, int action, i
 
 void Application::on_key_pressed(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    this->key = key;
-    key_action = action;
+    m_key = key;
+    m_keyAction = action;
 
     call_registered(key, action);
 }
 
+/**@brief ImGui: adds "(?)" with hover one the same line as the prev obj */
 static void HelpMarker(const char* desc)
 {
     ImGui::SameLine();
@@ -226,7 +227,7 @@ static void HelpMarker(const char* desc)
 
 void Application::show_interface()
 {
-    if (state == STATE_MODIFY)
+    if (m_state == STATE_MODIFY)
     {
         if (!ImGui::Begin("Application Controls", NULL))
         {
@@ -239,43 +240,42 @@ void Application::show_interface()
             static bool vsync = true;
             if (ImGui::Checkbox(" Vertical sync", &vsync))
                 set_vsync(vsync);
-            if (ImGui::Checkbox(" Wireframe", &m_wireframe)) {}
+
+            ImGui::Checkbox(" Wireframe", &m_wireframe);
         }
 
         if (ImGui::CollapsingHeader("Camera Settings"))
         {
             // TODO help (?)
-            glm::vec3 pos = camera->get_position();
-            float pitch = camera->get_pitch();
-            float yaw = camera->get_yaw();
-            static float fov = glm::radians(camera->get_field_of_view());
-            static float nearC = camera->get_near_plane_dist();
-            static float farC = camera->get_far_plane_dist();
+            static float fov = glm::radians(m_camera->field_of_view());
+            static float nearC = m_camera->near_plane_dist();
+            static float farC = m_camera->far_plane_dist();
+
+            glm::vec3 pos = m_camera->position();
+            float pitch = m_camera->pitch();
+            float yaw = m_camera->yaw();
 
             if (ImGui::InputFloat3("Position", glm::value_ptr(pos)))
-                camera->set_position(pos);
+                m_camera->set_position(pos);
             if (ImGui::SliderFloat("Pitch angle", &pitch, -89.f, 89.f, "%.0f deg"))
-                camera->set_pitch(pitch);
+                m_camera->set_pitch(pitch);
             if (ImGui::SliderFloat("Yaw angle", &yaw, 0.f, 360.f, "%.0f deg"))
-                camera->set_yaw(yaw);
+                m_camera->set_yaw(yaw);
             if (ImGui::SliderAngle("Field of view", &fov, 0.f, 180.f))
-                camera->set_field_of_view(fov);
+                m_camera->set_field_of_view(fov);
             if (ImGui::SliderFloat("Near plane", &nearC, 0.f, 10.f))
-                camera->set_near_plane_dist(nearC);
+                m_camera->set_near_plane_dist(nearC);
             if (ImGui::SliderFloat("Far plane", &farC, 100.f, 1000.f))
-                camera->set_far_plane_dist(farC);
+                m_camera->set_far_plane_dist(farC);
 
             // TODO camera preset positions relative to terrain size
             ImGui::Text("Position Presets");
             ImGui::Separator();
-            if (ImGui::Button("From Top"))
-                cameraSetPresetTop();
+            if (ImGui::Button("From Top")) { cameraSetPresetTop(); }
             ImGui::SameLine();
-            if (ImGui::Button("From Front"))
-                cameraSetPresetFront();
+            if (ImGui::Button("From Front")) { cameraSetPresetFront(); }
             ImGui::SameLine();
-            if (ImGui::Button("From Side"))
-                cameraSetPresetSideWays();
+            if (ImGui::Button("From Side")) { cameraSetPresetSideWays(); }
 
             ImGui::NewLine();
         }
@@ -285,11 +285,12 @@ void Application::show_interface()
                 static int dim = TERRAIN_INIT_SIZE;
                 static bool autoUpdate = false;
                 static bool falloff = true;
-                float tileScale = terrain->tileScale();
-                float heightScale = terrain->heightScale();
+                static float tileScale = m_terrain->tileScale();
+                static float heightScale = m_terrain->heightScale();
 
                 if (ImGui::Checkbox(" Falloff Map", &falloff))
-                    terrain->enableFalloffMap(falloff);
+                    m_terrain->enableFalloffMap(falloff);
+
                 // TODO ? with  [vertices^2]
                 ImGui::SliderInt("Terrain size", &dim, 4, 512);
                 ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 10.f);
@@ -298,15 +299,15 @@ void Application::show_interface()
                 ImGui::NewLine();
                 if (ImGui::Button("Generate"))
                 {
-                    terrain->setSize(dim, dim);
-                    terrain->setTileScale(tileScale);
-                    terrain->setHeightScale(heightScale);
+                    m_terrain->setSize(dim, dim);
+                    m_terrain->setTileScale(tileScale);
+                    m_terrain->setHeightScale(heightScale);
                 }
                 else if (autoUpdate)
                 {
-                    terrain->setSize(dim, dim);
-                    terrain->setTileScale(tileScale);
-                    terrain->setHeightScale(heightScale);
+                    m_terrain->setSize(dim, dim);
+                    m_terrain->setTileScale(tileScale);
+                    m_terrain->setHeightScale(heightScale);
                 }
                 ImGui::SameLine();
                 ImGui::Checkbox("Auto", &autoUpdate);
@@ -314,7 +315,7 @@ void Application::show_interface()
             ImGui::Separator();
             if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                static ProceduralTex2D& noiseMap = terrain->heightMap();
+                static ProceduralTex2D& noiseMap = m_terrain->heightMap();
                 static bool autoUpdate = false;
                 int32_t seed = noiseMap.seed();
                 float scale = noiseMap.scale();
@@ -326,9 +327,10 @@ void Application::show_interface()
 
                 // Select noise function
                 ImGui::NewLine();
-                const char* items[] = { "Random", "Perlin", "Accumulated Perlin"};
+                const char* noiseTypes[] = { "Random", "Perlin", "Accumulated Perlin"};
                 static int noiseType = noiseMap.type();
-                ImGui::Combo("Noise function", &noiseType, items, IM_ARRAYSIZE(items));
+                ImGui::Combo("Noise function", &noiseType, noiseTypes, 
+                             IM_ARRAYSIZE(noiseTypes));
 
                 if (noiseType == Noise::OctavesPerlin2D)
                 {
@@ -353,9 +355,9 @@ void Application::show_interface()
 
                 // TODO (?)
                 if (ImGui::Button("  Apply  "))
-                    terrain->applyNoiseMap();
+                    m_terrain->applyNoiseMap();
                 else if (autoUpdate)
-                    terrain->applyNoiseMap();
+                    m_terrain->applyNoiseMap();
 
                 ImGui::SameLine();
                 ImGui::Checkbox("Auto", &autoUpdate);
@@ -364,45 +366,42 @@ void Application::show_interface()
             ImGui::Separator();
             if (ImGui::TreeNode("Texturing"))
             {
-
-                static int use_type = 0;
+                static int useType = 0;
                 static int filterType = 0;
                 static bool usingBlending = false;
                 const uint8_t TERR_COLORS = 0;
                 const uint8_t TERR_TEXTURES = 1;
-                const char* items[] = { "Nearest", "Linear" };
-                float scaleFactor = terrain->getScaleFactor();
+                const char* filterTypes[] = { "Nearest", "Linear" };
 
                 ImGui::NewLine();
                 if (ImGui::Checkbox(" Blending (height-based)", &usingBlending))
-                {
-                    terrain->setBlending(usingBlending);
-                }
+                    m_terrain->setBlending(usingBlending);
+
                 // Select Filtering
-                if (ImGui::Combo("Filtering", &filterType, items, IM_ARRAYSIZE(items)))
+                if (ImGui::Combo("Filtering", &filterType, filterTypes, 
+                                 IM_ARRAYSIZE(filterTypes)))
                 {
                     if (filterType == 0)
-                        terrain->setFilteringPoint();
+                        m_terrain->setFilteringPoint();
                     else if (filterType == 1)
-                        terrain->setFilteringLinear();
+                        m_terrain->setFilteringLinear();
                 }
                 const float calcWidth = ImGui::CalcItemWidth() - 90;
 
                 // Select type of texturing
-                ImGui::RadioButton("Use colors", &use_type, TERR_COLORS); 
+                ImGui::RadioButton("Use colors", &useType, TERR_COLORS); 
                 HelpMarker("Click on the colored square to open a color picker.\n"
                                "Click and hold to use drag and drop.\n"
                                "Right-click on the colored square to show options.\n"
                                "CTRL+click on individual component to input value.\n");
                 ImGui::SameLine();
-                ImGui::RadioButton("Use textures", &use_type, TERR_TEXTURES);
+                ImGui::RadioButton("Use textures", &useType, TERR_TEXTURES);
 
                 // Terrain Colors
-                if (use_type == TERR_COLORS)
+                if (useType == TERR_COLORS)
                 {
-                    terrain->setUsingColors(true);
-                    static std::vector<Terrain::Region>& regions = terrain->regions();
-                    std::string elemName;
+                    m_terrain->setUsingColors(true);
+                    static std::vector<Terrain::Region>& regions = m_terrain->regions();
 
                     ImGui::Text("Name               Height            Color");
                     ImGui::Separator();
@@ -412,39 +411,41 @@ void Application::show_interface()
                     for (uint32_t i = 0; i < regions.size(); ++i)
                     {
                         Terrain::Region& r = regions[i];
-                        elemName = "##";
+                        std::string elemName("##");
                         elemName += std::to_string(i);
                         ImGui::InputText(elemName.c_str(), r.name.data(), 16);
                         ImGui::SameLine();
                         elemName += std::to_string(i);
                         if (ImGui::SliderFloat(elemName.c_str(), &r.toHeight, 0.01f, 1.0f))
-                            terrain->onRegionsChanged();
+                            m_terrain->onRegionsChanged();
 
                         ImGui::SameLine();
                         elemName += std::to_string(i);
                         if (ImGui::ColorEdit3(elemName.c_str(), (float*)&r.color, 
                                           ImGuiColorEditFlags_NoInputs | 
                                           ImGuiColorEditFlags_NoLabel))
-                            terrain->onRegionsChanged();
+                            m_terrain->onRegionsChanged();
 
                         ImGui::Separator();
                     }
                     ImGui::PopItemWidth();
                 }
                 // Textures
-                else if (use_type == TERR_TEXTURES)
+                else if (useType == TERR_TEXTURES)
                 {
-                    terrain->setUsingColors(false);
+                    float scaleFactor = m_terrain->getScaleFactor();
+                    m_terrain->setUsingColors(false);
                     static const std::vector<std::unique_ptr<Texture2D>>& guiTexs 
-                        = terrain->textures();
+                        = m_terrain->textures();    // TODO fixed palette
 
                     ImGui::SetNextItemWidth(calcWidth);
                     if (ImGui::DragFloat("Texture scale", &scaleFactor, 0.01f, 0.1f, 16.f))
-                        terrain->setScaleFactor(scaleFactor);
+                        m_terrain->setScaleFactor(scaleFactor);
                     ImGui::SameLine();
                     if (ImGui::Button("Default"))
-                        terrain->setScaleFactor(1.0f);
+                        m_terrain->setScaleFactor(1.0f);
                     
+                    // Preview of textures
                     const float texW = 96;
                     const float texH = 96;
                     for (uint32_t j = 0; j < guiTexs.size(); ++j)
@@ -454,7 +455,7 @@ void Application::show_interface()
                                       texW, texH);
                     }
                 }
-            // Slope controls
+            // Slope controls TODO
                 ImGui::TreePop();
             }
         }
@@ -479,7 +480,7 @@ void Application::show_interface()
 void Application::status_window()
 {
     // Overlay when flying with camera
-    if (state == STATE_FREEFLY)
+    if (m_state == STATE_FREEFLY)
         ImGui::SetNextWindowBgAlpha(0.35f);
 
     // Collapsed or Clipped
@@ -489,13 +490,13 @@ void Application::status_window()
         return;
     }
 
-        ImGuiIO& io = ImGui::GetIO();
-        // frametime and FPS
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 
-                    1000.0f / io.Framerate, io.Framerate);
-        ImGui::Text("%d vertices, %d indices (%d triangles)", 
-                    terrain->totalVertices(), terrain->totalIndices(),
-                    terrain->totalTriangles());
+    ImGuiIO& io = ImGui::GetIO();
+    // frametime and FPS
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 
+                1000.0f / io.Framerate, io.Framerate);
+    ImGui::Text("%d vertices, %d indices (%d triangles)", 
+                m_terrain->totalVertices(), m_terrain->totalIndices(),
+                m_terrain->totalTriangles());
 
     ImGui::End();
 }
@@ -505,7 +506,7 @@ void Application::set_state_modify()
     set_state(STATE_MODIFY);
 
     // Show the cursor
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 
 void Application::set_state_freefly()
@@ -513,7 +514,7 @@ void Application::set_state_freefly()
     set_state(STATE_FREEFLY);
 
     // Hide the cursor
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void Application::set_vsync(bool enabled)
@@ -569,25 +570,25 @@ void Application::showTexture(uint32_t texture_id, const glm::uvec2& texSize,
 
 void Application::cameraSetPresetTop()
 {
-    camera->set_position(glm::vec3(5,20,0));
-    camera->set_pitch(-89);
-    camera->set_yaw(270);
-    camera->set_field_of_view(45);
+    m_camera->set_position(glm::vec3(5,20,0));
+    m_camera->set_pitch(-89);
+    m_camera->set_yaw(270);
+    m_camera->set_field_of_view(45);
 }
 
 void Application::cameraSetPresetFront()
 {
-    camera->set_position(glm::vec3(0,5,13));
-    camera->set_pitch(-22);
-    camera->set_yaw(270);
-    camera->set_field_of_view(45);
+    m_camera->set_position(glm::vec3(0,5,13));
+    m_camera->set_pitch(-22);
+    m_camera->set_yaw(270);
+    m_camera->set_field_of_view(45);
 }
 
 void Application::cameraSetPresetSideWays()
 {
-    camera->set_position(glm::vec3(7,11,12));
-    camera->set_pitch(-40);
-    camera->set_yaw(245);
-    camera->set_field_of_view(45);
+    m_camera->set_position(glm::vec3(7,11,12));
+    m_camera->set_pitch(-40);
+    m_camera->set_yaw(245);
+    m_camera->set_field_of_view(45);
 }
 

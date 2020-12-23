@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file application.hpp
  * @brief Main application abstraction
@@ -62,8 +62,8 @@ private:
 
     void call_registered(int key, int action)
     { 
-        const auto& it = callback_map.find({key,action,state});
-        if (it != callback_map.end())
+        const auto& it = m_callbackMap.find({key,action,m_state});
+        if (it != m_callbackMap.end())
         {
             const auto& vec_callbacks = it->second;
             for (const auto& c : vec_callbacks)
@@ -72,7 +72,7 @@ private:
     }
 
     // Functions modifying application state
-    void set_state(int s) { /* DERR("New state: " << s); */ state = s; }
+    void set_state(int s) { DERR("New state: " << s); m_state = s; }
 
     void set_state_modify();    ///< Shows interface for modifications
     void set_state_freefly();   ///< Hides interface and enables flying w/ camera
@@ -86,12 +86,12 @@ private:
                      const float w, const float h);
 
     // Camera callbacks
-    void camera_key_pressed() { camera->on_key_pressed(key, key_action); }
-    void camera_forward()     { camera->key_forward(key_action); }
-    void camera_backward()    { camera->key_backward(key_action); }
-    void camera_right()       { camera->key_right(key_action); }
-    void camera_left()        { camera->key_left(key_action); }
-    void camera_reset()       { camera->key_reset(key_action); }
+    void camera_key_pressed() { m_camera->on_key_pressed(m_key, m_keyAction); }
+    void camera_forward()     { m_camera->key_forward(m_keyAction); }
+    void camera_backward()    { m_camera->key_backward(m_keyAction); }
+    void camera_right()       { m_camera->key_right(m_keyAction); }
+    void camera_left()        { m_camera->key_left(m_keyAction); }
+    void camera_reset()       { m_camera->key_reset(m_keyAction); }
 
 private:
     // ----------------------------------------------------------------------------
@@ -133,19 +133,19 @@ private:
     // ----------------------------------------------------------------------------
     // Data members 
     // ----------------------------------------------------------------------------
-    GLFWwindow* window;
+    GLFWwindow* m_window;
 
-    size_t width;
-    size_t height;
+    size_t m_width;
+    size_t m_height;
 
     // Timestamps
-    double lastFrame, framestamp, deltaTime;
-    uint32_t frames;
+    double m_lastFrame, m_framestamp, m_deltaTime;
+    uint32_t m_frames;
 
     // Maps the key, action and state to callback function
-    std::unordered_map<CallbackKey, callbacks, Callback_hash> callback_map;
+    std::unordered_map<CallbackKey, callbacks, Callback_hash> m_callbackMap;
 
-    int key, key_action;        ///< Keyboard key and action
+    int m_key, m_keyAction;        ///< Keyboard key and action
 
     enum States     ///< Application states, determines 
     {
@@ -153,7 +153,7 @@ private:
         STATE_FREEFLY   ///< GUI is hidden, camera is moving freely
     };
 
-    int state;
+    int m_state;    ///< Current app state
 
     // ----------------------------------------------------------------------------
     // Scene
@@ -161,20 +161,18 @@ private:
     // TODO resource manager?
     // TODO active camera, walk camera
     // ----------------------------------------------------------------------------
-    glm::mat4 projView;
+    glm::mat4 m_projView;
 
-    std::unique_ptr<Camera> camera;
+    std::unique_ptr<Camera> m_camera;
     void cameraSetPresetTop();
     void cameraSetPresetFront();
     void cameraSetPresetSideWays();
 
-    std::unique_ptr<Skybox> skybox;
+    std::unique_ptr<Skybox> m_skybox;
 
-    std::unique_ptr<Terrain> terrain;
+    std::unique_ptr<Terrain> m_terrain;
     const uint32_t TERRAIN_INIT_SIZE = 100;
     bool m_wireframe = false;
-
-    
 
 };
 

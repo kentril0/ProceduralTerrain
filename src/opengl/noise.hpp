@@ -1,6 +1,6 @@
 /**********************************************************
  * < Procedural Terrain Generator >
- * @author Martin Smutny, xsmutn13@stud.fit.vutbr.cz
+ * @author Martin Smutny, kentril.despair@gmail.com
  * @date 20.12.2020
  * @file noise.hpp
  * @brief Object for generating pseudorandom noise
@@ -60,11 +60,17 @@ public:
 
     value_t octavesPerlin2D(value_t x, value_t y) const;
 
+    /** @return Summed noise value in <0.0, 1.0> */
+    value_t octavesPerlinNorm(value_t x, value_t y, value_t z) const;
+
+    value_t octavesPerlin2DNorm(value_t x, value_t y) const;
+
     static constexpr value_t inverseLerp(value_t min, value_t max, value_t v) noexcept
     {
         return (v - min) / (max - min);
     }
 
+    /**@brief Reinitializes the hash table - random reshuffle */
     void reseed(uint32_t seed);
 
 private:
@@ -128,6 +134,5 @@ public:
     uint32_t m_octaves;
     float    m_persistence;
     float    m_lacunarity;
-
 };
 
