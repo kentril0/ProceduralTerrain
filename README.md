@@ -1,5 +1,5 @@
 # OpenGL Procedural Terrain Generation
-Procedural Terrain Generation using OpenGL and C++
+Procedural Terrain Generator using OpenGL and C++
 
 <img src="images/version_1_0.png" width="640" height="360">
 
@@ -7,11 +7,11 @@ Procedural Terrain Generation using OpenGL and C++
 1.0
 
 ## Features
+* Interactive GUI for tweaking your terrain
 * FPS camera
 * Skybox
 * Procedural Mesh
 * Accumulated Perlin Noise
-* GUI
 * Texturing
 * Falloff map
 * Height-based Blending
