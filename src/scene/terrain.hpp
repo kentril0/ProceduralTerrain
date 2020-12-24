@@ -80,7 +80,11 @@ public:
     // ------------------------------------------------------------------------
     // Setters
     // ------------------------------------------------------------------------
-    void setModel(const glm::mat4& m) { m_model = m; m_invModel = glm::inverse(m); }
+    void setModel(const glm::mat4& m) { 
+        m_model = m; 
+        m_invModel = glm::inverse(m);
+        m_normalMat = glm::transpose(glm::inverse(glm::mat3(m_model)));
+    }
 
     /**@brief Sets a new size of the terrain and refills the buffers */
     void setSize(const glm::uvec2& size) { regenerate(size); }
@@ -206,6 +210,7 @@ private:
 
     glm::mat4 m_model;             ///< Model matrix
     glm::mat4 m_invModel;          ///< Inverse model matrix
+    glm::mat3 m_normalMat;         ///< Normal matrix
 
     // Data
     std::vector<glm::vec3> m_vertices;

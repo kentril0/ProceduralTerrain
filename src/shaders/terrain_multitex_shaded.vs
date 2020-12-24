@@ -9,6 +9,7 @@ struct Light {
 
 struct Object {
 	mat4 model;
+    mat3 normalMat;
 	vec3 ambient;
 	vec3 diffuse;
 	vec4 specular;  // last component is shininess
@@ -30,8 +31,7 @@ uniform Object object;
 void main()
 {
     fsPosition = vec3(object.model * vec4(position, 1.0));
-    // TODO optimize normalMatrix
-    fsNormal = transpose(inverse(mat3(object.model))) * normal;
+    fsNormal = object.normalMat * normal;
 	fsTexCoord = scale * texCoord;
 	fsOpacity = texCoord;
 

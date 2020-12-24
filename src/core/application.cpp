@@ -108,6 +108,7 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     // Setup OpenGL states
     // --------------------------------------------------------------------------
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 
     set_vsync(true);
 

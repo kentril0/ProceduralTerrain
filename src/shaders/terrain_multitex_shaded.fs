@@ -9,6 +9,7 @@ struct Light {
 
 struct Object {
     mat4 model;
+    mat3 normalMat;
     vec3 ambient;
     vec3 diffuse;
     vec4 specular;  // last component is shiniess

@@ -108,6 +108,13 @@ public:
      */
     void set_vec4(const char* name,
                   const glm::vec4& value);
+    /**
+     * @brief Set float value of a matrix3 uniform variable of an ACTIVE program
+     * @param name Name of the variable
+     * @param value GLM mat3 value 
+     */
+    void set_mat3(const char* name,
+                  const glm::mat3& matrix);
 
     /**
      * @brief Set float value of a matrix4 uniform variable of an ACTIVE program
@@ -116,7 +123,7 @@ public:
      */
     void set_mat4(const char* name,
                   const glm::mat4& matrix);
-    
+ 
 private:
  
     /**
