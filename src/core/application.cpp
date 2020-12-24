@@ -50,10 +50,18 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     std::shared_ptr<Shader> shTerMulti = std::make_shared<Shader>(
                                           "shaders/terrain_multitex.vs",
                                           "shaders/terrain_multitex.fs");
+    std::shared_ptr<Shader> shTerShadingSingle = std::make_shared<Shader>(
+                                          "shaders/draw_terrain_shaded.vs",
+                                          "shaders/draw_terrain_shaded.fs");
+    std::shared_ptr<Shader> shTerShadingMulti = std::make_shared<Shader>(
+                                          "shaders/terrain_multitex_shaded.vs",
+                                          "shaders/terrain_multitex_shaded.fs");
     m_terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
                                           0.2f, 2.f);
     m_terrain->addShader(shTerSingle);
     m_terrain->addShader(shTerMulti);
+    m_terrain->addShader(shTerShadingSingle);
+    m_terrain->addShader(shTerShadingMulti);
 
     // Load textures
     m_terrain->loadTexture("images/waterDeep.jpg");
@@ -151,11 +159,11 @@ void Application::render()
 
     // Render the terrain
     if (!m_wireframe)
-        m_terrain->render(m_projView);
+        m_terrain->render(m_projView, m_camera->position());
     else
     {
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-            m_terrain->render(m_projView);
+            m_terrain->render(m_projView, m_camera->position());
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
     }
 
@@ -456,6 +464,36 @@ void Application::show_interface()
                     }
                 }
             // Slope controls TODO
+                ImGui::TreePop();
+            }
+            ImGui::Separator();
+            if (ImGui::TreeNode("Shading"))
+            {
+                static bool usingShading = false;
+                if (ImGui::Checkbox(" Shading ", &usingShading))
+                    m_terrain->setShading(usingShading);
+
+                ImGui::Text("Directional Light");
+                ImGui::Separator();
+                static struct Terrain::DirLight dirLight = m_terrain->dirLight();
+                static glm::vec3& lightDir = dirLight.direction;
+                static glm::vec3& lightAmbient = dirLight.ambient;
+                static glm::vec3& lightDiffuse = dirLight.diffuse;
+                static glm::vec3& lightSpecular = dirLight.specular;
+
+                ImGui::DragFloat3("Direction", glm::value_ptr(lightDir), 0.1f);
+                ImGui::ColorEdit3("Ambient",  glm::value_ptr(lightAmbient), 
+                                              ImGuiColorEditFlags_Float);
+                ImGui::ColorEdit3("Diffuse",  glm::value_ptr(lightDiffuse), 
+                                              ImGuiColorEditFlags_Float);
+                ImGui::ColorEdit3("Specular", glm::value_ptr(lightSpecular), 
+                                              ImGuiColorEditFlags_Float);
+
+                m_terrain->setDirLight(dirLight);
+
+                ImGui::Text("Material");
+                ImGui::Separator();
+
                 ImGui::TreePop();
             }
         }

@@ -13,7 +13,7 @@
 #include "opengl/vertex_array.hpp"
 #include "opengl/proc_texture2d.hpp"
 
-#define TRIANGLE_STRIP  // Faster render times
+//#define TRIANGLE_STRIP  // Faster render times
 
 
 /**
@@ -42,7 +42,9 @@ public:
 
     /** @brief 1st shader added is for single texturing
      *         2nd is for multi texturing
-     *         TODO
+     *         3rd is for shading with single texture
+     *         4th is for shading with multiple textures
+     *         TODO BETTER just TWO SHADERS TODO
      */
     void addShader(const std::shared_ptr<Shader>& sh);
 
@@ -55,7 +57,8 @@ public:
     //~Terrain();
 
     //@param projView Projection view matrix 
-    void render(const glm::mat4& projView) const;
+    //@param viewPos Position of the camera
+    void render(const glm::mat4& projView, const glm::vec3& viewPos) const;
 
     /**
      * @brief Gets the height of the terrain at a particular point in the world space.
@@ -208,6 +211,8 @@ private:
     // Shader, shared_ptr for probable future extensibility
     std::shared_ptr<Shader> shSingle;       ///< Single texturing
     std::shared_ptr<Shader> shMulti;        ///< Multi texturing
+    std::shared_ptr<Shader> shShadingSingle;        ///< Shaded single texturing
+    std::shared_ptr<Shader> shShadingMulti;         ///< Shaded multi texturing
 
     ProceduralTex2D m_heightMap;          ///< Procedurally generated height map
 
@@ -267,6 +272,43 @@ private:
     {
         return pow(v,fade_a) / (pow(v,fade_a) + pow((fade_b - fade_b * v), fade_a));
     }
+
+    //------------------------------------------------------------
+    // Lighting
+
+    // Directional light
+public:
+    struct DirLight {
+        glm::vec3 direction;
+        glm::vec3 ambient;
+        glm::vec3 diffuse;
+        glm::vec3 specular;
+
+        DirLight() : direction(-0.2f, -1.0f, -0.3f), 
+                     ambient(0.0f), diffuse(1.0f), specular(1.0f) {}
+    };
+
+    struct Material {
+        glm::vec3 ambient;
+        glm::vec3 diffuse;
+        glm::vec4 specular;         // the last component is the shininess factor
+
+        Material() : ambient(0.0f), diffuse(1.0f), 
+                     specular(0.1f, 0.1f, 0.1f, 4.f) {}
+    };
+
+    // @brief Sets whether the shading is on or off
+    void setShading(bool b) { m_shading = b; }
+
+    const DirLight& dirLight() const { return m_dirLight; }
+
+    void setDirLight(const DirLight& dl) { m_dirLight = dl; }
+
+private:
+    bool m_shading = false;
+
+    DirLight m_dirLight;
+    Material m_material;
 };
 
 

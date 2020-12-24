@@ -77,6 +77,18 @@ void Terrain::addShader(const std::shared_ptr<Shader>& sh)
         shMulti->set_int("opacityMap", 1);
         glUseProgram(0);
     }
+    else if (shShadingSingle == nullptr)
+    {
+        shShadingSingle = sh;
+    }
+    else if (shShadingMulti == nullptr)
+    {
+        shShadingMulti = sh;
+        shShadingMulti->use();
+        shShadingMulti->set_int("multiTex", 0);
+        shShadingMulti->set_int("opacityMap", 1);
+        glUseProgram(0);
+    }
     // TODO others
 }
 
@@ -325,9 +337,9 @@ void Terrain::generateBuffers()
 
     std::shared_ptr ibo = std::make_shared<IndexBuffer>(m_indices.size(), m_indices.data());
 
-    m_vboVertices->set_layout(BufferLayout({{ElementType::Float3, "Position"}}));
-    m_vboNormals->set_layout(BufferLayout({{ElementType::Float3, "Normal"}}));
-    m_vboTexels->set_layout(BufferLayout({{ElementType::Float2, "TexCoords"}}));
+    m_vboVertices->set_layout(BufferLayout({{ElementType::Float3, "position"}}));
+    m_vboNormals->set_layout(BufferLayout({{ElementType::Float3, "normal"}}));
+    m_vboTexels->set_layout(BufferLayout({{ElementType::Float2, "texCoord"}}));
 
     m_vao.add_vertex_buffer(m_vboVertices);
     m_vao.add_vertex_buffer(m_vboNormals);
@@ -345,32 +357,72 @@ void Terrain::updateNormalsBuffer()
     m_vboNormals->set_data(m_normals.size() * sizeof(glm::vec3), m_normals.data());
 }
 
-void Terrain::render(const glm::mat4& projView) const
+void Terrain::render(const glm::mat4& projView, const glm::vec3& viewPos) const
 {
-    // TODO better
+    // TODO better just two shaders
     if (m_blending)
     {
-        shMulti->use();
-        shMulti->set_mat4("MVP", projView * m_model);
-        shMulti->set_int("layers", m_regions.size());
-        shMulti->set_vec2("scale", m_scaleFactor, m_scaleFactor);
+        if (m_shading)
+        {
+            shShadingMulti->use();
+            shShadingMulti->set_mat4("MVP", projView * m_model);
+            shShadingMulti->set_int("layers", m_regions.size());
+            shShadingMulti->set_vec2("scale", m_scaleFactor, m_scaleFactor);
 
+            shShadingMulti->set_mat4("object.model", m_model);
+            shShadingMulti->set_vec3("object.ambient", m_material.ambient);
+            shShadingMulti->set_vec3("object.diffuse", m_material.diffuse);
+            shShadingMulti->set_vec4("object.specular", m_material.specular);
+
+            shShadingMulti->set_vec3("viewPos", viewPos);
+
+            shShadingMulti->set_vec3("light.direction", m_dirLight.direction);
+            shShadingMulti->set_vec3("light.ambient",   m_dirLight.ambient);
+            shShadingMulti->set_vec3("light.diffuse",   m_dirLight.diffuse);
+            shShadingMulti->set_vec3("light.specular",  m_dirLight.specular);
+        }
+        else
+        {
+            shMulti->use();
+            // TODO optimize, premultiply
+            shMulti->set_mat4("MVP", projView * m_model);
+            shMulti->set_int("layers", m_regions.size());
+            shMulti->set_vec2("scale", m_scaleFactor, m_scaleFactor);
+        }
 
         glActiveTexture(GL_TEXTURE0);
         if (m_usingColors)
             glBindTexture(GL_TEXTURE_2D_ARRAY, m_colorTextures);
         else
-        {
             glBindTexture(GL_TEXTURE_2D_ARRAY, m_textureArray);
-        }
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D_ARRAY, m_opacityMap);
     }
     else
     {
-        shSingle->use();
-        shSingle->set_mat4("MVP", projView * m_model);
+        if (m_shading)
+        {
+            shShadingSingle->use();
+            shShadingSingle->set_mat4("MVP", projView * m_model);
+
+            shShadingSingle->set_mat4("object.model", m_model);
+            shShadingSingle->set_vec3("object.ambient", m_material.ambient);
+            shShadingSingle->set_vec3("object.diffuse", m_material.diffuse);
+            shShadingSingle->set_vec4("object.specular", m_material.specular);
+
+            shShadingSingle->set_vec3("viewPos", viewPos);
+
+            shShadingSingle->set_vec3("light.direction", m_dirLight.direction);
+            shShadingSingle->set_vec3("light.ambient",   m_dirLight.ambient);
+            shShadingSingle->set_vec3("light.diffuse",   m_dirLight.diffuse);
+            shShadingSingle->set_vec3("light.specular",  m_dirLight.specular);
+        }
+        else
+        {
+            shSingle->use();
+            shSingle->set_mat4("MVP", projView * m_model);
+        }
         m_surface.bind();
     }
 
