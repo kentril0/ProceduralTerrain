@@ -40,6 +40,13 @@ public:
             float tileScale = 1.0f, float heightScale = 1.0f,
             const glm::mat4& model = glm::mat4(1.0f));
 
+    Terrain(const glm::uvec2& size,
+            float tileScale, float heightScale,
+            bool blending, bool texturing, bool shading,
+            bool filterLinear, float texScale,
+            float noiseScale,
+            const glm::mat4& model = glm::mat4(1.0f));
+
     /** @brief 1st shader added is for single texturing
      *         2nd is for multi texturing
      *         3rd is for shading with single texture
@@ -155,6 +162,10 @@ public:
     const std::vector<std::unique_ptr<Texture2D>>& textures() const { return guiTextures; }
 
     float getScaleFactor() const { return m_scaleFactor; }
+
+    bool usingColors() const { return m_usingColors; }
+
+    bool blending() const { return m_blending; }
 
 private:    
     void init();

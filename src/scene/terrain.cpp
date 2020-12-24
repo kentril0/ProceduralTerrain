@@ -35,7 +35,7 @@ Terrain::Terrain(uint32_t x, uint32_t y,
 Terrain::Terrain(const glm::uvec2& size,
                  float tileScale, float heightScale,
                  const glm::mat4& model)
-: m_size(size.x, size.y),
+: m_size(size),
   m_tileScale(tileScale),
   m_heightScale(heightScale),
   m_model(model),
@@ -46,6 +46,31 @@ Terrain::Terrain(const glm::uvec2& size,
   m_useFalloff(true)
 {
     init();
+}
+
+Terrain::Terrain(const glm::uvec2& size,
+                 float tileScale, float heightScale,
+                 bool blending, bool texturing, bool shading,
+                 bool filterLinear, float texScale, 
+                 float noiseScale,
+                 const glm::mat4& model)
+: m_size(size),
+  m_tileScale(tileScale),
+  m_heightScale(heightScale),
+  m_model(model),
+  m_invModel(glm::inverse(model)),
+  m_heightMap(size.x),
+  m_scaleFactor(texScale),
+  m_surface(true),
+  m_useFalloff(true)
+{
+    m_blending = blending;
+    m_usingColors = !texturing;
+    m_shading = shading;
+    m_heightMap.setScale(noiseScale);
+
+    init();
+    setFilteringLinear();
 }
 
 void Terrain::init()

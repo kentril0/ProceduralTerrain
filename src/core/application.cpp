@@ -56,8 +56,19 @@ Application::Application(GLFWwindow* w, size_t initial_width, size_t initial_hei
     std::shared_ptr<Shader> shTerShadingMulti = std::make_shared<Shader>(
                                           "shaders/terrain_multitex_shaded.vs",
                                           "shaders/terrain_multitex_shaded.fs");
-    m_terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
-                                          0.2f, 2.f);
+    if (BENCHMARK)
+    {
+        m_terrain = std::make_unique<Terrain>(glm::uvec2(BENCH_TERRAIN_SIZE, BENCH_TERRAIN_SIZE), 
+                                              BENCH_TILE_SCALE, 2.0f,
+                                              BENCH_BLENDING, BENCH_TEXTURING, BENCH_SHADING,
+                                              BENCH_FILTERING_LINEAR, BENCH_TEX_SCALE,
+                                              BENCH_NOISE_SCALE);
+    }
+    else 
+    {
+        m_terrain = std::make_unique<Terrain>(TERRAIN_INIT_SIZE, TERRAIN_INIT_SIZE, 
+                                              0.2f, 2.f);
+    }
     m_terrain->addShader(shTerSingle);
     m_terrain->addShader(shTerMulti);
     m_terrain->addShader(shTerShadingSingle);
@@ -290,7 +301,7 @@ void Application::show_interface()
         if (ImGui::CollapsingHeader("Terrain Controls", ImGuiTreeNodeFlags_DefaultOpen))
         {
             {
-                static int dim = TERRAIN_INIT_SIZE;
+                static int dim = m_terrain->size().x;
                 static bool autoUpdate = false;
                 static bool falloff = true;
                 static float tileScale = m_terrain->tileScale();
@@ -374,9 +385,9 @@ void Application::show_interface()
             ImGui::Separator();
             if (ImGui::TreeNode("Texturing"))
             {
-                static int useType = 0;
-                static int filterType = 0;
-                static bool usingBlending = false;
+                static int useType = m_terrain->usingColors();
+                static int filterType = BENCHMARK ? 1 : 0;
+                static bool usingBlending = m_terrain->blending();
                 const uint8_t TERR_COLORS = 0;
                 const uint8_t TERR_TEXTURES = 1;
                 const char* filterTypes[] = { "Nearest", "Linear" };
