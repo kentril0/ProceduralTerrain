@@ -186,5 +186,6 @@ private:
     const float    BENCH_NOISE_SCALE = 60.f;
     // 30.7ms, 32.5fps
     // 33 ms
+    // 33 ms normalMat
 };
 

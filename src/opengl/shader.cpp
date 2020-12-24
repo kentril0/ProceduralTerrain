@@ -120,6 +120,12 @@ void Shader::set_vec4(const char *name, const glm::vec4 &value)
                 value.x, value.y, value.z, value.w);
 }
 
+void Shader::set_mat3(const char *name, const glm::mat3 &matrix)
+{
+    glUniformMatrix3fv(glGetUniformLocation(m_id, name), 1, false, 
+                       glm::value_ptr(matrix));
+}
+
 void Shader::set_mat4(const char *name, const glm::mat4 &matrix)
 {
     glUniformMatrix4fv(glGetUniformLocation(m_id, name), 1, false, 

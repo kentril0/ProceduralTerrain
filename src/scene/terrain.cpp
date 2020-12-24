@@ -24,6 +24,7 @@ Terrain::Terrain(uint32_t x, uint32_t y,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
+  m_normalMat(glm::transpose(glm::inverse(glm::mat3(m_model)))),
   m_heightMap(x),
   m_scaleFactor(1.0f),
   m_surface(true),
@@ -40,6 +41,7 @@ Terrain::Terrain(const glm::uvec2& size,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
+  m_normalMat(glm::transpose(glm::inverse(glm::mat3(m_model)))),
   m_heightMap(size.x),
   m_scaleFactor(1.0f),
   m_surface(true),
@@ -59,6 +61,7 @@ Terrain::Terrain(const glm::uvec2& size,
   m_heightScale(heightScale),
   m_model(model),
   m_invModel(glm::inverse(model)),
+  m_normalMat(glm::transpose(glm::inverse(glm::mat3(m_model)))),
   m_heightMap(size.x),
   m_scaleFactor(texScale),
   m_surface(true),
@@ -395,6 +398,7 @@ void Terrain::render(const glm::mat4& projView, const glm::vec3& viewPos) const
             shShadingMulti->set_vec2("scale", m_scaleFactor, m_scaleFactor);
 
             shShadingMulti->set_mat4("object.model", m_model);
+            shShadingMulti->set_mat3("object.normalMat", m_normalMat);
             shShadingMulti->set_vec3("object.ambient", m_material.ambient);
             shShadingMulti->set_vec3("object.diffuse", m_material.diffuse);
             shShadingMulti->set_vec4("object.specular", m_material.specular);
@@ -432,6 +436,7 @@ void Terrain::render(const glm::mat4& projView, const glm::vec3& viewPos) const
             shShadingSingle->set_mat4("MVP", projView * m_model);
 
             shShadingSingle->set_mat4("object.model", m_model);
+            shShadingSingle->set_mat3("object.normalMat", m_normalMat);
             shShadingSingle->set_vec3("object.ambient", m_material.ambient);
             shShadingSingle->set_vec3("object.diffuse", m_material.diffuse);
             shShadingSingle->set_vec4("object.specular", m_material.specular);
