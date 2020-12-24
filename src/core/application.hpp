@@ -174,5 +174,17 @@ private:
     const uint32_t TERRAIN_INIT_SIZE = 100;
     bool m_wireframe = false;
 
+    // Terrain properties for benchmark
+    const bool     BENCHMARK = true;
+    const uint32_t BENCH_TERRAIN_SIZE = 512;
+    const float    BENCH_TILE_SCALE = 0.05f;
+    const bool     BENCH_BLENDING = true;
+    const bool     BENCH_TEXTURING = true;
+    const bool     BENCH_SHADING = true;
+    const bool     BENCH_FILTERING_LINEAR = true;
+    const float    BENCH_TEX_SCALE = 24.f;
+    const float    BENCH_NOISE_SCALE = 60.f;
+    // 30.7ms, 32.5fps
+    // 33 ms
 };
 
