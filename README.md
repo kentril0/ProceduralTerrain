@@ -1,7 +1,9 @@
 # OpenGL Procedural Terrain Generation
 Procedural Terrain Generator using OpenGL and C++
 
-Without shading:<br/>
+<img src="images/version_1_0.png" width="640" height="360">
+
+<br/>Without shading:<br/>
 <img src="images/non_shaded.png" width="640" height="360">
 
 Shading using Phong Model:<br/>
