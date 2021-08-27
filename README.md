@@ -46,6 +46,3 @@ In root directory of this project:
 
 ## Known Issues
 TODO
-
-# Author
-Martin Smutny, kentril.despair@gmail.com
