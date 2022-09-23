@@ -7,12 +7,14 @@
 
 #include <memory>
 #include <unordered_map>
+#include <map>
 
 #define SGL_USE_IMGUI
 #include <SGL/SGL.h>
 
 #include "scene/Camera.h"
 #include "scene/Skybox.h"
+#include "scene/ProceduralTexture2D.h"
 #include "scene/Terrain.h"
 
 
@@ -35,6 +37,8 @@ protected:
     virtual void OnImGuiRender() override;
 
 private:
+    using Color = glm::vec3;
+
     void CreateShaders();
     void CreateTextures();
     void CreateSceneObjects();
@@ -48,7 +52,11 @@ private:
     void CreateCamera();
     void CreateSkybox();
     void CreateProceduralTexture();
+    void CreateTerrainColorMap();
     void CreateTerrain();
+
+    void FillColorRegionSearchMap();
+    std::vector<Color> GenerateColorData();
 
     void SetupPreRenderStates();
 
@@ -82,11 +90,42 @@ private:
 
     std::unique_ptr<Skybox> m_Skybox;
 
-    glm::uvec2 m_TerrainSize{ 128 };
-    std::shared_ptr<ProceduralTexture2D> m_HeightMap;
+    glm::uvec2 m_TextureSize{ 512 };
+
+    std::shared_ptr<ProceduralTexture2D> m_NoiseMap;
+    std::shared_ptr<sgl::Texture2D> m_ColorMap;
+
     std::unique_ptr<Terrain> m_Terrain;
+    std::shared_ptr<sgl::Shader> m_TerrainShader;
 
     bool m_RenderWireframe{ false };
+
+    // -------------------------------------------------------------------------
+    // Coloring
+
+    struct ColorRegion
+    {
+        const char* name;
+        float heightTopBound;
+        Color color;
+    };
+
+    // TODO try constructors
+    static constexpr std::array s_kColorRegions{
+        ColorRegion{"Water Deep",    0.3,  Color(0.0, 0.0, 0.8)       },
+        ColorRegion{"Water Shallow", 0.4,  Color(54, 103, 199)/255.f  },
+        ColorRegion{"Sand",          0.45, Color(210, 208, 125)/255.f },
+        ColorRegion{"Grass",         0.55, Color(86, 152, 23)/255.f   },
+        ColorRegion{"Trees",         0.6,  Color(62, 107, 18)/255.f   },
+        ColorRegion{"Rock",          0.7,  Color(90, 69, 60)/255.f    },
+        ColorRegion{"Higher Rock",   0.9,  Color(75, 60, 53)/255.f    },
+        ColorRegion{"Snow",          1.0,  Color(1.0, 1.0, 1.0)       }
+    };
+    static constexpr glm::vec3 s_kDefaultColor{1.0};
+
+    // Colors per height range
+    std::map<float, glm::vec3> m_ColorRegionSearchMap;
+
 
 private:
     // -------------------------------------------------------------------------

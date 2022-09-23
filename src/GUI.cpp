@@ -94,8 +94,8 @@ void ProceduralTerrain::ShowInterface()
             ImGui::NewLine();
             if (ImGui::Button("Generate"))
             {
-                m_HeightMap->SetSize(glm::uvec2(dim, dim));
-                m_HeightMap->GenerateValues();
+                m_NoiseMap->SetSize(glm::uvec2(dim, dim));
+                m_NoiseMap->GenerateValues();
 
                 m_Terrain->SetSize(glm::uvec2(dim, dim));
                 m_Terrain->SetTileScale(tileScale);
@@ -107,12 +107,12 @@ void ProceduralTerrain::ShowInterface()
 
         if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            static auto scale = m_HeightMap->GetScale();
+            static auto scale = m_NoiseMap->GetScale();
 
             if ( ImGui::DragFloat2("Scale", glm::value_ptr(scale), 
                 0.01f, 0.f, 100.f) )
             {
-                m_HeightMap->SetScale(scale);
+                m_NoiseMap->SetScale(scale);
             }
 
             ImGui::TreePop();

@@ -3,6 +3,7 @@
  * (http://opensource.org/licenses/MIT)
  */
 
+#define SGL_DEBUG
 #include "ProceduralTerrain.h"
 #include "ResourceManager.h"
 
@@ -42,6 +43,7 @@ void ProceduralTerrain::CreateSceneObjects()
     CreateCamera();
     CreateSkybox();
     CreateProceduralTexture();
+    CreateTerrainColorMap();
     CreateTerrain();
 }        
 
@@ -83,14 +85,17 @@ void ProceduralTerrain::Render()
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    m_TerrainShader->Use();
+
+    m_ColorMap->Bind();
+
+    m_TerrainShader->SetMat4("MVP", m_ProjViewMat * glm::mat4(1.0));
     if (!m_RenderWireframe)
-    {
-        m_Terrain->Render(m_ProjViewMat, m_Camera->GetPosition());
-    }
+        m_Terrain->Render();
     else
     {
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-            m_Terrain->Render(m_ProjViewMat, m_Camera->GetPosition());
+            m_Terrain->Render();
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
     }
 
@@ -106,39 +111,6 @@ void ProceduralTerrain::OnImGuiRender()
     }
 
     StatusWindow();
-}
-
-// =============================================================================
-
-void ProceduralTerrain::OnResize(GLFWwindow *window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
-
-void ProceduralTerrain::OnMouseMove(GLFWwindow *window, double x, double y)
-{ 
-    if (m_State == State::FreeFly)
-        m_Camera->OnMouseMove(x, y);
-}
-
-void ProceduralTerrain::OnMousePressed(GLFWwindow *window, int button,
-                                       int action, int mods)
-{
-
-}
-
-void ProceduralTerrain::OnKeyPressed(GLFWwindow *window, int key, int scancode,
-                                     int action, int mods)
-{
-    m_Camera->OnKeyPressed(key, action);
-
-    if (key == KEY_TOGGLE_MENU && action == GLFW_RELEASE)
-    {
-        if (m_State == State::Modify)
-            SetStateFreeFly();
-        else
-            SetStateModify();
-    }
 }
 
 // =============================================================================
@@ -193,9 +165,7 @@ void ProceduralTerrain::CreateTerrainShaders()
         sgl::LoadTextFile(s_kTerrainFS)
     );
 
-    auto terrainShader = sgl::Shader::Create({ vertShader, fragShader });
-
-    ResourceManager::AddShader(terrainShader, s_kTerrainShaderName);
+    m_TerrainShader = sgl::Shader::Create({ vertShader, fragShader });
 }
 
 void ProceduralTerrain::LoadTerrainTextures()
@@ -228,9 +198,9 @@ void ProceduralTerrain::CreateSkybox()
 void ProceduralTerrain::CreateProceduralTexture()
 {
     SGL_FUNCTION();
-    m_HeightMap = ProceduralTexture2D::Create(m_TerrainSize);
-    m_HeightMap->SetScale(glm::vec2(32.0f));
-    m_HeightMap->GenerateValues();
+    m_NoiseMap = ProceduralTexture2D::Create(m_TextureSize);
+    m_NoiseMap->SetScale(glm::vec2(32.0f));
+    m_NoiseMap->GenerateValues();
 }
 
 void ProceduralTerrain::CreateTerrain()
@@ -257,10 +227,53 @@ void ProceduralTerrain::CreateTerrain()
     */
 
     m_Terrain = Terrain::CreateUniq(
-        ResourceManager::GetShader(s_kTerrainShaderName),
-        m_HeightMap->GetValues(),
-        m_TerrainSize
+        m_TextureSize,
+        m_NoiseMap->GetValues()
     );
+}
+
+void ProceduralTerrain::CreateTerrainColorMap()
+{
+    SGL_FUNCTION();
+    FillColorRegionSearchMap();
+
+    std::vector<Color> colors = GenerateColorData();
+
+    m_ColorMap = sgl::Texture2D::Create({
+        m_TextureSize.x, m_TextureSize.y,
+        colors.data(),
+        GL_RGB8, GL_RGB, GL_FLOAT,
+        true
+    });
+}
+
+void ProceduralTerrain::FillColorRegionSearchMap()
+{
+    for (const auto& region : s_kColorRegions)
+    {
+        m_ColorRegionSearchMap[region.heightTopBound] = region.color;
+    }
+}
+
+std::vector<ProceduralTerrain::Color> ProceduralTerrain::GenerateColorData()
+{
+    std::vector<Color> colors(m_TextureSize.x * m_TextureSize.y);
+
+    for (uint32_t y = 0; y < m_TextureSize.y; ++y)
+        for (uint32_t x = 0; x < m_TextureSize.x; ++x)
+        {
+            const uint32_t kIndex = y*m_TextureSize.x + x;
+            const float kHeight = m_NoiseMap->operator[](kIndex);
+
+            const auto colorRangeIt =
+                m_ColorRegionSearchMap.lower_bound(kHeight);
+            if ( colorRangeIt != m_ColorRegionSearchMap.end() )
+                colors[kIndex] = colorRangeIt->second;
+            else
+                colors[kIndex] = s_kDefaultColor;
+        }
+
+    return colors;
 }
 
 void ProceduralTerrain::CameraSetPresetTop()
@@ -311,4 +324,37 @@ static void KeyPressedCallback(GLFWwindow *w, int key, int scancode,
 {
     auto app = (ProceduralTerrain*)glfwGetWindowUserPointer(w);
     app->OnKeyPressed(w, key, scancode, action, mods);
+}
+
+// =============================================================================
+
+void ProceduralTerrain::OnResize(GLFWwindow *window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
+void ProceduralTerrain::OnMouseMove(GLFWwindow *window, double x, double y)
+{
+    if (m_State == State::FreeFly)
+        m_Camera->OnMouseMove(x, y);
+}
+
+void ProceduralTerrain::OnMousePressed(GLFWwindow *window, int button,
+                                       int action, int mods)
+{
+
+}
+
+void ProceduralTerrain::OnKeyPressed(GLFWwindow *window, int key, int scancode,
+                                     int action, int mods)
+{
+    m_Camera->OnKeyPressed(key, action);
+
+    if (key == KEY_TOGGLE_MENU && action == GLFW_RELEASE)
+    {
+        if (m_State == State::Modify)
+            SetStateFreeFly();
+        else
+            SetStateModify();
+    }
 }

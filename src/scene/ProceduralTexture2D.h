@@ -28,7 +28,7 @@ public:
     /** @brief Assumes the index is within bounds
      * @return Noise at index */
     NoiseValue operator[](uint32_t index) const { return m_Values[index]; }
-    NoiseValue operator[](const glm::vec2& coord) const { 
+    NoiseValue operator[](const glm::uvec2& coord) const {
         return m_Values[coord.x * m_Cols + coord.y];
     }
 

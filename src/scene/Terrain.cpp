@@ -17,26 +17,22 @@
 #define TRIANGLES_PER_QUAD 2
 #define INDICES_PER_TRIANGLE 3
 
-//#define DEBUG_STRIP
 
 std::unique_ptr<Terrain> Terrain::CreateUniq(
-    const std::shared_ptr<sgl::Shader>& shader,
-    const std::vector<float>& heightMap,
-    const glm::uvec2& size)
+    const glm::uvec2& size,
+    const std::vector<float>& heightMap)
 {
-    return std::make_unique<Terrain>(shader, heightMap, size);
+    return std::make_unique<Terrain>(size, heightMap);
 }
 
 // =============================================================================
 
-Terrain::Terrain(const std::shared_ptr<sgl::Shader>& shader,
-                 const std::vector<float>& heightMap,
-                 const glm::uvec2& size)
-    : m_Shader(shader),
-      m_HeightMap(heightMap),
+Terrain::Terrain(const glm::uvec2& size,
+                 const std::vector<float>& heightMap)
+
+    : m_HeightMap(heightMap),
       m_Size(size)
 {
-    SetupColorRegions();
     Generate();
 }
 
@@ -51,8 +47,6 @@ void Terrain::Generate()
     GeneratePositions();
     GenerateIndices();
     GenerateNormals();
-
-    GenerateColorData();
 
     UpdateVAO();
 }
@@ -72,23 +66,21 @@ void Terrain::GenerateTexCoords()
 
 void Terrain::GeneratePositions()
 {
+    // Account for tile scaling
     const glm::vec2 kWorldSize = GetWorldSize();
-    const glm::vec2 kWorldHalfSize = kWorldSize*0.5f;
+    const glm::vec2 kCenterOffset = kWorldSize*0.5f;
 
     m_Positions.resize( GetVertexCount() );
 
-    // Generates values from top-left (0,0) to bottom right (1,1)
     for (uint32_t y = 0; y < m_Size.y; ++y)
         for (uint32_t x = 0; x < m_Size.x; ++x)
         {
             const uint32_t kIndex = y * m_Size.x + x;
-
             auto& position = m_Positions[kIndex];
-            position.x = m_TexCoords[kIndex].x *
-                         kWorldSize.x - kWorldHalfSize.y;
-            position.y = GetHeight(kIndex);
-            position.z = m_TexCoords[kIndex].y *
-                         kWorldSize.y - kWorldHalfSize.y;
+
+            position.x = m_TexCoords[kIndex].x * kWorldSize.x - kCenterOffset.x;
+            position.y = GetHeightScaled(kIndex);
+            position.z = m_TexCoords[kIndex].y * kWorldSize.y - kCenterOffset.y;
         }
 }
 
@@ -163,7 +155,6 @@ void Terrain::UpdateVAO()
         vertices[i].position = m_Positions[i];
         vertices[i].normal = m_Normals[i];
         vertices[i].texCoord = m_TexCoords[i];
-        vertices[i].color = m_Colors[i];
     }
 
     // TODO recreate or reallocate?
@@ -176,8 +167,7 @@ void Terrain::UpdateVAO()
     vbo->SetLayout({
         { sgl::ElementType::Float3, "position" },
         { sgl::ElementType::Float3, "normal" },
-        { sgl::ElementType::Float2, "texCoord" },
-        { sgl::ElementType::Float3, "color" }
+        { sgl::ElementType::Float2, "texCoord" }
     });
 
     auto ibo = sgl::IndexBuffer::Create(
@@ -192,11 +182,8 @@ void Terrain::UpdateVAO()
     m_VAO.SetIndexBuffer(ibo);
 }
 
-void Terrain::Render(const glm::mat4& projView,
-    const glm::vec3& camPosition) const
+void Terrain::Render() const
 {
-    m_Shader->Use();
-    m_Shader->SetMat4("MVP", projView * glm::mat4(1.0));
     m_VAO.Bind();
 
     glDrawElements(GL_TRIANGLES,
@@ -204,34 +191,3 @@ void Terrain::Render(const glm::mat4& projView,
                    GL_UNSIGNED_INT, 0);
 }
 
-void Terrain::SetupColorRegions()
-{
-    FillColorRegionSearchMap();
-}
-
-void Terrain::FillColorRegionSearchMap()
-{
-    for (const auto& region : s_kColorRegions)
-    {
-        m_ColorRegionSearchMap[region.heightTopBound] = region.color;
-    }
-}
-
-void Terrain::GenerateColorData()
-{
-    m_Colors.resize( GetVertexCount() );
-
-    for (uint32_t y = 0; y < m_Size.y; ++y)
-        for (uint32_t x = 0; x < m_Size.x; ++x)
-        {
-            const uint32_t kIndex = y*m_Size.x + x;
-            const float kHeight = GetHeight(kIndex);
-
-            const auto colorRangeIt = 
-                m_ColorRegionSearchMap.lower_bound(kHeight);
-            if ( colorRangeIt != m_ColorRegionSearchMap.end() )
-                m_Colors[kIndex] = colorRangeIt->second;
-            else
-                m_Colors[kIndex] = s_kDefaultColor;
-        }
-}
