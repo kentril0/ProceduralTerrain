@@ -199,7 +199,7 @@ void ProceduralTerrain::CreateProceduralTexture()
 {
     SGL_FUNCTION();
     m_NoiseMap = ProceduralTexture2D::Create(m_TextureSize);
-    m_NoiseMap->SetScale(glm::vec2(32.0f));
+    m_NoiseMap->SetScale(32.0f);
     m_NoiseMap->GenerateValues();
 }
 
@@ -239,12 +239,15 @@ void ProceduralTerrain::CreateTerrainColorMap()
 
     std::vector<Color> colors = GenerateColorData();
 
+    m_ColorMap.reset();
     m_ColorMap = sgl::Texture2D::Create({
         m_TextureSize.x, m_TextureSize.y,
         colors.data(),
         GL_RGB8, GL_RGB, GL_FLOAT,
         true
     });
+    m_ColorMap->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+    m_ColorMap->SetFiltering(GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST);
 }
 
 void ProceduralTerrain::FillColorRegionSearchMap()
@@ -278,7 +281,7 @@ std::vector<ProceduralTerrain::Color> ProceduralTerrain::GenerateColorData()
 
 void ProceduralTerrain::CameraSetPresetTop()
 {
-    m_Camera->SetPosition(glm::vec3(0,100,0));
+    m_Camera->SetPosition(glm::vec3(0,m_TextureSize.y,0));
     m_Camera->SetPitch(-89);
     m_Camera->SetYaw(180);
     m_Camera->SetFOV(45);

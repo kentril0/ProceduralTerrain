@@ -19,7 +19,9 @@ std::shared_ptr<ProceduralTexture2D> ProceduralTexture2D::Create(
 
 ProceduralTexture2D::ProceduralTexture2D(uint32_t rows, uint32_t cols)
     : m_Rows(rows),
-      m_Cols(cols)
+      m_Cols(cols),
+      m_PerlinNoise(),
+      m_FractalNoise(m_PerlinNoise, m_Scale)
 {
     GenerateValues();
 }
@@ -40,11 +42,7 @@ void ProceduralTexture2D::GenerateValues()
         for (uint32_t y = 0; y < m_Cols; ++y)
         {
             const uint32_t kIndex = x*m_Cols + y;
-            // TODO
-            m_Values[kIndex] = m_Noise.Noise(
-                (float)x / m_Scale.x,
-                (float)y / m_Scale.y,
-                0);
+            m_Values[kIndex] = m_FractalNoise.Noise(x, y, 0);
         }
 }
 
@@ -54,7 +52,9 @@ void ProceduralTexture2D::SetSize(const glm::uvec2& size)
     m_Cols = size.y;
 }
 
-void ProceduralTexture2D::SetScale(const glm::vec2& scale)
+void ProceduralTexture2D::SetScale(float scale)
 {
+    scale = glm::max(0.001f, scale);
     m_Scale = scale;
+    m_FractalNoise.SetScale(scale);
 }

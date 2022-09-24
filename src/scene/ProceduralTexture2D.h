@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 
 #include "PerlinNoise.h"
+#include "FractalNoise.h"
 
 
 // TODO template
@@ -40,21 +41,22 @@ public:
     void GenerateValues();
 
     void SetSize(const glm::uvec2& size);
-    void SetScale(const glm::vec2& scale);
+    void SetScale(float scale);
 
     std::vector<NoiseValue>& GetValues() { return m_Values; }
     const std::vector<NoiseValue>& GetValues() const { return m_Values; }
 
-    glm::vec2 GetScale() const { return m_Scale; }
+    float GetScale() const { return m_Scale; }
 
 private:
     uint32_t m_Rows{ 0 };
     uint32_t m_Cols{ 0 };
 
     std::vector<NoiseValue> m_Values;
-    PerlinNoise<NoiseValue> m_Noise;
+    PerlinNoise<NoiseValue> m_PerlinNoise;
+    FractalNoise<NoiseValue> m_FractalNoise;
 
-    glm::vec2 m_Scale{ 1.0 };
+    float m_Scale{ 1.0 };
 
     //static constexpr NoiseValue kOutOfBoundsValue = 0;
 };

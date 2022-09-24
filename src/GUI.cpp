@@ -96,6 +96,7 @@ void ProceduralTerrain::ShowInterface()
             {
                 m_NoiseMap->SetSize(glm::uvec2(dim, dim));
                 m_NoiseMap->GenerateValues();
+                CreateTerrainColorMap();
 
                 m_Terrain->SetSize(glm::uvec2(dim, dim));
                 m_Terrain->SetTileScale(tileScale);
@@ -107,9 +108,9 @@ void ProceduralTerrain::ShowInterface()
 
         if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            static auto scale = m_NoiseMap->GetScale();
+            static float scale = m_NoiseMap->GetScale();
 
-            if ( ImGui::DragFloat2("Scale", glm::value_ptr(scale), 
+            if ( ImGui::DragFloat("Scale", &scale,
                 0.01f, 0.f, 100.f) )
             {
                 m_NoiseMap->SetScale(scale);

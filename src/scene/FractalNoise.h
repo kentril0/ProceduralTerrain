@@ -35,7 +35,7 @@ public:
           m_Gain(gain),
           m_Lacunarity(lacunarity) {}
 
-    /** @return 3D Fractal noise value in [-1,1] */
+    /** @return 3D Fractal noise value in [0,1] */
     T Noise(T x, T y, T z)
     {
         T sum = 0;
@@ -57,8 +57,15 @@ public:
             frequency *= m_Lacunarity;
         }
 
-        return sum / max;
+        sum = sum / max;
+        return (sum + (T)1.0) / (T)2.0;
     }
+
+    void SetScale(T scale) { m_Scale = scale; }
+    void SetOffset(T offset) { m_Offset = offset; }
+    void SetOctaves(uint32_t octaves) { m_Octaves = octaves; }
+    void SetGain(T gain) { m_Gain = gain; }
+    void SetLacunarity(T lacunarity) { m_Lacunarity = lacunarity; }
 
 private:
     PerlinNoise<T> m_PerlinNoise;
