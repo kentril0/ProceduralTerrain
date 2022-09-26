@@ -106,20 +106,20 @@ private:
     struct ColorRegion
     {
         const char* name;
-        float heightTopBound;
+        float startHeight;
         Color color;
     };
 
     // TODO try constructors
-    static constexpr std::array s_kColorRegions{
-        ColorRegion{"Water Deep",    0.3,  Color(0.0, 0.0, 0.8)       },
-        ColorRegion{"Water Shallow", 0.4,  Color(54, 103, 199)/255.f  },
-        ColorRegion{"Sand",          0.45, Color(210, 208, 125)/255.f },
-        ColorRegion{"Grass",         0.55, Color(86, 152, 23)/255.f   },
-        ColorRegion{"Trees",         0.6,  Color(62, 107, 18)/255.f   },
-        ColorRegion{"Rock",          0.7,  Color(90, 69, 60)/255.f    },
-        ColorRegion{"Higher Rock",   0.9,  Color(75, 60, 53)/255.f    },
-        ColorRegion{"Snow",          1.0,  Color(1.0, 1.0, 1.0)       }
+    std::vector<ColorRegion> s_kColorRegions{
+        ColorRegion{"Water Deep",    0.0,  Color(0.0, 0.0, 0.8)       },
+        ColorRegion{"Water Shallow", 0.1,  Color(54, 103, 199)/255.f  },
+        ColorRegion{"Sand",          0.15, Color(210, 208, 125)/255.f },
+        ColorRegion{"Grass",         0.2, Color(86, 152, 23)/255.f   },
+        ColorRegion{"Trees",         0.3,  Color(62, 107, 18)/255.f   },
+        ColorRegion{"Rock",          0.6,  Color(90, 69, 60)/255.f    },
+        ColorRegion{"Higher Rock",   0.8,  Color(75, 60, 53)/255.f    },
+        ColorRegion{"Snow",          0.9,  Color(1.0, 1.0, 1.0)       }
     };
     static constexpr glm::vec3 s_kDefaultColor{1.0};
 

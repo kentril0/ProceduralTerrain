@@ -7,9 +7,11 @@
 
 #include <memory>
 #include <vector>
+#include <limits>
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+// TODO better
 #define SGL_DEBUG
 #define SGL_ENABLE_ASSERTS
 #include <SGL/SGL.h>
@@ -79,8 +81,8 @@ void Terrain::GeneratePositions()
             auto& position = m_Positions[kIndex];
 
             position.x = m_TexCoords[kIndex].x * kWorldSize.x - kCenterOffset.x;
-            position.y = GetHeightScaled(kIndex);
             position.z = m_TexCoords[kIndex].y * kWorldSize.y - kCenterOffset.y;
+            position.y = GetHeightScaled(kIndex);
         }
 }
 

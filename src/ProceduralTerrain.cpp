@@ -43,7 +43,7 @@ void ProceduralTerrain::CreateSceneObjects()
     CreateCamera();
     CreateSkybox();
     CreateProceduralTexture();
-    CreateTerrainColorMap();
+    //CreateTerrainColorMap();
     CreateTerrain();
 }        
 
@@ -86,10 +86,37 @@ void ProceduralTerrain::Render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_TerrainShader->Use();
-
-    m_ColorMap->Bind();
-
     m_TerrainShader->SetMat4("MVP", m_ProjViewMat * glm::mat4(1.0));
+
+    // TOOD only on change
+    const float kTerrainHeightScale = m_Terrain->GetHeightScale();
+    m_TerrainShader->SetFloat("uMinHeight", m_NoiseMap->GetMinValue() * kTerrainHeightScale );
+    m_TerrainShader->SetFloat("uMaxHeight", m_NoiseMap->GetMaxValue() * kTerrainHeightScale);
+
+    m_TerrainShader->SetInt("uColorCount", s_kColorRegions.size());
+
+    // TODO generator or smth, the best way to to this
+    std::vector<Color> colors(s_kColorRegions.size());
+    int i = 0;
+    for (auto region : s_kColorRegions)
+    {
+        colors[i] = region.color;
+        ++i;
+    }
+
+    m_TerrainShader->SetFloat3Array("uColors", colors.data(), colors.size());
+
+    std::vector<float> heights(s_kColorRegions.size());
+    i = 0;
+    for (auto region : s_kColorRegions)
+    {
+        heights[i] = region.startHeight; // TODO rename to start height or smth
+        ++i;
+    }
+    m_TerrainShader->SetFloatArray("uStartHeights", heights.data(), heights.size());
+
+    //m_ColorMap->Bind();
+
     if (!m_RenderWireframe)
         m_Terrain->Render();
     else
@@ -254,7 +281,7 @@ void ProceduralTerrain::FillColorRegionSearchMap()
 {
     for (const auto& region : s_kColorRegions)
     {
-        m_ColorRegionSearchMap[region.heightTopBound] = region.color;
+        m_ColorRegionSearchMap[region.startHeight] = region.color;
     }
 }
 
@@ -269,7 +296,7 @@ std::vector<ProceduralTerrain::Color> ProceduralTerrain::GenerateColorData()
             const float kHeight = m_NoiseMap->operator[](kIndex);
 
             const auto colorRangeIt =
-                m_ColorRegionSearchMap.lower_bound(kHeight);
+                m_ColorRegionSearchMap.upper_bound(kHeight);
             if ( colorRangeIt != m_ColorRegionSearchMap.end() )
                 colors[kIndex] = colorRangeIt->second;
             else

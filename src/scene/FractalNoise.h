@@ -46,9 +46,9 @@ public:
         for (uint32_t i = 0; i < m_Octaves; ++i)
         {
             T noiseVal = m_PerlinNoise.Noise(
-                x / m_Scale * frequency + m_Offset,
-                y / m_Scale * frequency + m_Offset,
-                z / m_Scale * frequency + m_Offset); // * (T)2 - (T)1 ;
+                (x + m_Offset) / m_Scale * frequency,
+                (y + m_Offset) / m_Scale * frequency,
+                (z + m_Offset) / m_Scale * frequency); // * (T)2 - (T)1 ;
 
             sum += noiseVal * amplitude;
             max += amplitude;

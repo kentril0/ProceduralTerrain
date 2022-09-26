@@ -102,8 +102,8 @@ private:
     const std::vector<float>& m_HeightMap;
 
     glm::uvec2 m_Size{ 0 };
-    float m_TileScale{ 1.0 }, // Scaling factor of X and Z coord (per tile)
-          m_HeightScale{ 1.0 }; // Scaling factor of Y coord, the height
+    float m_TileScale{ 1.0 }; // Scaling factor of X and Z coord (per tile)
+    float m_HeightScale{ 1.0 }; // Scaling factor of Y coord, the height
 
     // -------------------------------------------------------------------------
     // Data on CPU will be "batched"

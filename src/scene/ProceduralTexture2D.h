@@ -47,16 +47,21 @@ public:
     const std::vector<NoiseValue>& GetValues() const { return m_Values; }
 
     float GetScale() const { return m_Scale; }
+    float GetMinValue() const { return m_MinValue; }
+    float GetMaxValue() const { return m_MaxValue; }
 
 private:
     uint32_t m_Rows{ 0 };
     uint32_t m_Cols{ 0 };
 
-    std::vector<NoiseValue> m_Values;
     PerlinNoise<NoiseValue> m_PerlinNoise;
     FractalNoise<NoiseValue> m_FractalNoise;
 
+    std::vector<NoiseValue> m_Values;
+
     float m_Scale{ 1.0 };
+    float m_MinValue{ 0.0 };
+    float m_MaxValue{ 0.0 };
 
     //static constexpr NoiseValue kOutOfBoundsValue = 0;
 };

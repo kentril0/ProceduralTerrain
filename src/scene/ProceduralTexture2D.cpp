@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <vector>
+#include <limits>
 
 
 std::shared_ptr<ProceduralTexture2D> ProceduralTexture2D::Create(
@@ -38,11 +39,19 @@ void ProceduralTexture2D::GenerateValues()
 
     m_Values.resize(m_Rows * m_Cols);
 
+    m_MinValue = std::numeric_limits<float>::max();
+    m_MaxValue = std::numeric_limits<float>::min();
+
     for (uint32_t x = 0; x < m_Rows; ++x)
         for (uint32_t y = 0; y < m_Cols; ++y)
         {
             const uint32_t kIndex = x*m_Cols + y;
-            m_Values[kIndex] = m_FractalNoise.Noise(x, y, 0);
+            const float kValue = m_FractalNoise.Noise(x, y, 0);
+
+            m_Values[kIndex] = kValue;
+
+            m_MinValue = glm::min(m_MinValue, kValue);
+            m_MaxValue = glm::max(m_MaxValue, kValue);
         }
 }
 

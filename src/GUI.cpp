@@ -121,9 +121,20 @@ void ProceduralTerrain::ShowInterface()
         ImGui::Separator();
         
         ImGui::Separator();
-        if (ImGui::TreeNode("Shading"))
+        if (ImGui::TreeNode("Layers"))
         {
-            
+            for (auto& layer : s_kColorRegions)
+            {
+                ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+                if (ImGui::TreeNode(layer.name))
+                {
+                    ImGui::DragFloat("Start height", &layer.startHeight, 0.01f, 0.0f, 1.0f);
+                    ImGui::TreePop();
+                }
+            }
+            // button::AddLayer
+
+
             ImGui::Separator();
             ImGui::TreePop();
         }
