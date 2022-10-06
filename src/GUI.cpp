@@ -8,20 +8,9 @@
 
 
 /**@brief ImGui: adds "(?)" with hover one the same line as the prev obj */
-static void HelpMarker(const char* desc)
-{
-    ImGui::SameLine();
-    ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
-static void showTexture(uint32_t texture_id, const glm::uvec2& texSize, 
+static void HelpMarker(const char* desc);
+
+static void ShowTexture(uint32_t texture_id, const glm::uvec2& texSize, 
                               const float w, const float h);
 
 void ProceduralTerrain::ShowInterface()
@@ -51,7 +40,7 @@ void ProceduralTerrain::ShowInterface()
         float pitch = m_Camera->GetPitch();
         float yaw = m_Camera->GetYaw();
 
-        if (ImGui::InputFloat3("Position", glm::value_ptr(pos)))
+        if (ImGui::DragFloat3("Position", glm::value_ptr(pos)))
             m_Camera->SetPosition(pos);
         if (ImGui::SliderFloat("Pitch angle", &pitch, -89.f, 89.f, "%.0f deg"))
             m_Camera->SetPitch(pitch);
@@ -80,61 +69,151 @@ void ProceduralTerrain::ShowInterface()
                                  ImGuiTreeNodeFlags_DefaultOpen) )
     {
         {
-            static int dim = m_Terrain->GetSize().x;
+            static bool terrainChanged = false;
             static bool autoUpdate = false;
             static bool falloff = true;
+            
+            static int terrainSize = m_Terrain->GetSize().x;
+            static int terrainLastSize = terrainSize;
             static float tileScale = m_Terrain->GetTileScale();
             static float heightScale = m_Terrain->GetHeightScale();
 
-            // TODO ? with  [vertices^2]
-            ImGui::SliderInt("Terrain size", &dim, 4, 512);
-            ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 10.f);
-            ImGui::SliderFloat("Height scale", &heightScale, 0.01f, 10.f);
+            terrainChanged |= ImGui::SliderInt("Terrain size", &terrainSize, 4, 2048);
+            terrainChanged |= ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 1.f);
+            terrainChanged |= ImGui::SliderFloat("Height scale", &heightScale, 1.f, 32.f);
 
             ImGui::NewLine();
-            if (ImGui::Button("Generate"))
+            const bool kGeneratePressed = ImGui::Button("Generate");
+            // TODO if noiseMapChanged as well
+            if ( terrainChanged && (kGeneratePressed || autoUpdate) )
             {
-                m_NoiseMap->SetSize(glm::uvec2(dim, dim));
-                m_NoiseMap->GenerateValues();
-                CreateTerrainColorMap();
+                m_TerrainChanged = true;
+                if (terrainSize != terrainLastSize)
+                {
+                    m_NoiseMap->SetSize(glm::uvec2(terrainSize, terrainSize));
+                    m_NoiseMap->GenerateValues();
+                    m_Terrain->SetSize(glm::uvec2(terrainSize, terrainSize));
+                    terrainLastSize = terrainSize;
+                }
 
-                m_Terrain->SetSize(glm::uvec2(dim, dim));
                 m_Terrain->SetTileScale(tileScale);
                 m_Terrain->SetHeightScale(heightScale);
                 m_Terrain->Generate();
+
+                terrainChanged = false;
             }
+            ImGui::SameLine();
+            ImGui::Checkbox("Auto", &autoUpdate);
         }
         ImGui::Separator();
 
         if (ImGui::TreeNodeEx("Noise Map Generation", ImGuiTreeNodeFlags_DefaultOpen))
         {
+            static bool noiseMapChanged = false;
+            static bool autoUpdate = false;
             static float scale = m_NoiseMap->GetScale();
+            static int32_t seed = m_NoiseMap->GetSeed();
+            static float offset = m_NoiseMap->GetOffset();
+            static int octaves = m_NoiseMap->GetOctaves();
+            static float gain = m_NoiseMap->GetGain();
+            static float lacunarity = m_NoiseMap->GetLacunarity();
 
-            if ( ImGui::DragFloat("Scale", &scale,
-                0.01f, 0.f, 100.f) )
+            noiseMapChanged |= ImGui::DragInt("Seed", &seed);
+            noiseMapChanged |= ImGui::DragFloat("Scale", &scale, 0.1f, 0.001f, 100.f);
+            noiseMapChanged |= ImGui::DragFloat("Offset", &offset, 1.0f, -10000.f, 10000.f);
+            // TODO (?)
+            noiseMapChanged |= ImGui::SliderInt("Octaves", &octaves, 1, 32);
+            noiseMapChanged |= ImGui::DragFloat("Gain (Persistence)", &gain, 0.01f, 0.f, 1.f);
+            noiseMapChanged |= ImGui::DragFloat("Lacunarity", &lacunarity, 0.01f, 1.f, 100.f);
+
+            if (noiseMapChanged)
             {
+                m_NoiseMap->SetSeed(seed);
+                m_NoiseMap->SetOctaves(octaves);
                 m_NoiseMap->SetScale(scale);
+                m_NoiseMap->SetOffset(offset);
+                m_NoiseMap->SetGain(gain);
+                m_NoiseMap->SetLacunarity(lacunarity);
             }
+
+            ImGui::NewLine();
+            bool kUpdatePressed = ImGui::Button("Update");
+            ImGui::SameLine();
+            ImGui::Checkbox("Auto", &autoUpdate);
+
+            if ( noiseMapChanged && ( kUpdatePressed || autoUpdate ) )
+            {
+                m_NoiseMap->GenerateValues();
+                m_NoiseMap->UpdateTexture();
+                noiseMapChanged = false;
+            }
+
+            ShowTexture(m_NoiseMap->GetTexture()->GetID(), m_NoiseMap->GetSize(), 128, 128);
 
             ImGui::TreePop();
         }
         ImGui::Separator();
         
         ImGui::Separator();
-        if (ImGui::TreeNode("Layers"))
+        if (ImGui::TreeNodeEx("Regions", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            for (auto& layer : s_kColorRegions)
+            // TODO global settings
+
+            static bool addRegionState = false;
+            static char inputRegionName[65];
+
+            if (!addRegionState)
             {
-                ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-                if (ImGui::TreeNode(layer.name))
+                if ( ImGui::Button("Add Region") )
+                    addRegionState = true;
+            }
+            else
+            {
+                ImGui::InputText("Name", inputRegionName,
+                                 IM_ARRAYSIZE(inputRegionName) );
+                if ( ImGui::Button("Add Region") )
                 {
-                    ImGui::DragFloat("Start height", &layer.startHeight, 0.01f, 0.0f, 1.0f);
-                    ImGui::TreePop();
+                    AddNewRegion(inputRegionName);
+                    inputRegionName[0] = '\0';
+                    addRegionState = false;
                 }
             }
-            // button::AddLayer
 
+            for (uint32_t i = 0; i < m_Regions.size(); ++i)
+            {
+                auto& region = m_Regions[i];
 
+                ImGui::PushID(i);
+                if ( ImGui::TreeNode(region.name.c_str()) )
+                {
+                    ImGui::DragFloat("Start Height", &region.startHeight, 0.01f, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Tint", glm::value_ptr(region.tint));
+                    ImGui::Combo("Texture", &region.texIndex,
+                                 s_kTerrainTexturePaths.data(),
+                                 s_kTerrainTexturePaths.size());
+                    ImGui::DragFloat("Tint Strength", &region.tintStrength, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("Blend range", &region.blendStrength, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("Texture Scale", &region.scale, 0.1f, 0.0f, 100.0f);
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNodeEx("Lighting" ))
+        {
+            auto& data = m_LightingUBOData;
+            ImGui::DragFloat3("Sun Direction", glm::value_ptr(data.sunDir), 0.1f);
+            ImGui::DragFloat("Sun Intensity", &data.sunIntensity, 0.01f, 0.0f, 5.0f);
+            ImGui::ColorEdit3("Sun Color", glm::value_ptr(data.sunColor),
+                              ImGuiColorEditFlags_Float);
+            ImGui::ColorEdit3("Sky Color", glm::value_ptr(data.skyColor),
+                              ImGuiColorEditFlags_Float);
+            ImGui::ColorEdit3("Bounce Color", glm::value_ptr(data.bounceColor),
+                              ImGuiColorEditFlags_Float);
             ImGui::Separator();
             ImGui::TreePop();
         }
@@ -167,7 +246,21 @@ void ProceduralTerrain::StatusWindow()
     ImGui::End();
 }
 
-static void showTexture(uint32_t texture_id, const glm::uvec2& texSize, 
+static void HelpMarker(const char* desc)
+{
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
+static void ShowTexture(uint32_t texture_id, const glm::uvec2& texSize, 
                               const float w, const float h)
 {
     ImTextureID tex_id = (void*)(intptr_t)texture_id;
