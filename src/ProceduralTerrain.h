@@ -7,7 +7,6 @@
 
 #include <memory>
 #include <unordered_map>
-#include <map>
 
 #define SGL_USE_IMGUI
 #include <SGL/SGL.h>
@@ -21,7 +20,6 @@
 class ProceduralTerrain : public sgl::Application
 {
 public:
-    // TODO app params
     ProceduralTerrain();
     ~ProceduralTerrain();
 
@@ -47,16 +45,13 @@ private:
     void CreateTerrainShaders();
 
     void LoadSkyboxTextures();
-    void LoadTerrainTextures();
+    std::vector<sgl::STBData> LoadTerrainTextures() const;
 
     void CreateCamera();
     void CreateSkybox();
     void CreateProceduralTexture();
-    void CreateTerrainColorMap();
+    void CreateTerrainTextureArray();
     void CreateTerrain();
-
-    void FillColorRegionSearchMap();
-    std::vector<Color> GenerateColorData();
 
     void SetupPreRenderStates();
 
@@ -69,6 +64,13 @@ private:
     void CameraSetPresetTop();
     void CameraSetPresetFront();
     void CameraSetPresetSideways();
+
+    void CreateTerrainUBO();
+    void CreateLightingUBO();
+    void UpdateTerrainUBO();
+    void UpdateLightingUBO() const;
+
+    void AddNewRegion(const char* name);
 
 private:
     enum class State
@@ -90,42 +92,105 @@ private:
 
     std::unique_ptr<Skybox> m_Skybox;
 
-    glm::uvec2 m_TextureSize{ 512 };
-
     std::shared_ptr<ProceduralTexture2D> m_NoiseMap;
-    std::shared_ptr<sgl::Texture2D> m_ColorMap;
+    glm::uvec2 m_TextureSize{ 512 };
 
     std::unique_ptr<Terrain> m_Terrain;
     std::shared_ptr<sgl::Shader> m_TerrainShader;
 
+    std::unique_ptr<sgl::Texture2DArray> m_TexArray;
+    int32_t m_TexArrayTexWidth = 512;
+    int32_t m_TexArrayTexHeight = 512;
+    uint32_t m_TexArrayTexFormat = GL_RGB8;
+
     bool m_RenderWireframe{ false };
+    bool m_TerrainChanged{ true };
 
     // -------------------------------------------------------------------------
-    // Coloring
+    // Terrain Regions
 
-    struct ColorRegion
+    /** @brief Correspond to s_kTexturePaths array */
+    enum TextureIndices {
+        TEX_WATER,
+        TEX_SAND,
+        TEX_GRASS,
+        TEX_STONY_GRASS,
+        TEX_ROCKY,
+        TEX_MOUNTAINS,
+        TEX_SNOW
+    };
+
+    struct Region
     {
-        const char* name;
         float startHeight;
-        Color color;
+        std::string name;
+        Color tint;
+        int texIndex;      ///< Index into texture paths
+        float scale;
+        float tintStrength;
+        float blendStrength;
+    };
+    // TODO global blendStrength, tintStrength, scale
+
+    std::vector<Region> m_Regions{
+        { 0.0, "Water Deep", Color(0.0, 0.0, 0.8), TEX_WATER, 2.0, 0.1, 0.2 },
+        { 0.1, "Water Shallow", Color(54, 103, 199)/255.f, TEX_WATER, 2.0, 0.1, 0.2 },
+        { 0.15, "Sand", Color(210, 208, 125)/255.f, TEX_SAND, 2.0, 0.1, 0.2 },
+        { 0.2, "Grass", Color(86, 152, 23)/255.f, TEX_GRASS, 2.0, 0.1, 0.2 },
+        { 0.3, "Trees", Color(62, 107, 18)/255.f, TEX_STONY_GRASS, 2.0, 0.1, 0.2 },
+        { 0.6, "Rock", Color(90, 69, 60)/255.f, TEX_ROCKY, 2.0, 0.1, 0.2 },
+        { 0.8, "Higher Rock", Color(75, 60, 53)/255.f, TEX_MOUNTAINS, 2.0, 0.1, 0.2 },
+        { 0.9, "Snow", Color(1.0, 1.0, 1.0), TEX_SNOW, 2.0, 0.1, 0.2 },
     };
 
-    // TODO try constructors
-    std::vector<ColorRegion> s_kColorRegions{
-        ColorRegion{"Water Deep",    0.0,  Color(0.0, 0.0, 0.8)       },
-        ColorRegion{"Water Shallow", 0.1,  Color(54, 103, 199)/255.f  },
-        ColorRegion{"Sand",          0.15, Color(210, 208, 125)/255.f },
-        ColorRegion{"Grass",         0.2, Color(86, 152, 23)/255.f   },
-        ColorRegion{"Trees",         0.3,  Color(62, 107, 18)/255.f   },
-        ColorRegion{"Rock",          0.6,  Color(90, 69, 60)/255.f    },
-        ColorRegion{"Higher Rock",   0.8,  Color(75, 60, 53)/255.f    },
-        ColorRegion{"Snow",          0.9,  Color(1.0, 1.0, 1.0)       }
+    static constexpr Color s_kDefaultColor{ 1.0 };
+
+    // -------------------------------------------------------------------------
+    // Uniform Buffers
+
+    static const uint32_t s_kMaxRegionCount = 8;
+
+    struct RegionUBO
+    {
+        float texScale;
+        int texIndex;
+        float blendStrength;
+        float startHeight;
+        glm::vec3 tint;
+        float tintStrength;
     };
-    static constexpr glm::vec3 s_kDefaultColor{1.0};
 
-    // Colors per height range
-    std::map<float, glm::vec3> m_ColorRegionSearchMap;
+    struct TerrainUBO
+    {
+        float minHeight;
+        float maxHeight;
+        int regionCount;
+        alignas(16) RegionUBO regions[s_kMaxRegionCount];
+    };
 
+    TerrainUBO m_TerrainUBOData;
+    std::unique_ptr<sgl::UniformBuffer> m_TerrainUBO;
+
+    struct LightingUBO
+    {
+        glm::vec3 sunColor;
+        float sunIntensity;
+        alignas(16) glm::vec3 sunDir;
+        alignas(16) glm::vec3 skyColor;
+        alignas(16) glm::vec3 bounceColor;
+    };
+
+    LightingUBO m_LightingUBOData{
+        glm::vec3(0.7, 0.45, 0.3),
+        2.2,
+        glm::vec3(0.8, 0.4, 0.2),
+        glm::vec3(0.5, 0.8, 0.9),
+        glm::vec3(0.7, 0.3, 0.2),
+    };
+    std::unique_ptr<sgl::UniformBuffer> m_LightingUBO;
+
+    static constexpr uint32_t s_kTerrainUBOBindingPoint = 1;
+    static constexpr uint32_t s_kLightingUBOBindingPoint = 2;
 
 private:
     // -------------------------------------------------------------------------
@@ -133,12 +198,12 @@ private:
     #define PREFIX ""
 
     // Shaders
-    static constexpr auto s_kSkyboxVS = PREFIX "shaders/SkyboxVS.vs",
-                          s_kSkyboxFS = PREFIX "shaders/SkyboxFS.fs",
+    static constexpr auto s_kSkyboxVS = PREFIX "shaders/Skybox.vert",
+                          s_kSkyboxFS = PREFIX "shaders/Skybox.frag",
                           s_kSkyboxShaderName = "skybox";
 
-    static constexpr auto s_kTerrainVS = PREFIX "shaders/TerrainVS.vs",
-                          s_kTerrainFS = PREFIX "shaders/TerrainFS.fs",
+    static constexpr auto s_kTerrainVS = PREFIX "shaders/Terrain.vert",
+                          s_kTerrainFS = PREFIX "shaders/Terrain.frag",
                           s_kTerrainShaderName = "terrain";
 
     static constexpr Skybox::FacesPaths s_kSkyboxTexturePaths {
@@ -149,5 +214,16 @@ private:
         PREFIX "textures/skybox/front.jpg",
         PREFIX "textures/skybox/back.jpg"
     };
+
+    static constexpr std::array s_kTerrainTexturePaths{
+        PREFIX "textures/water.jpg",
+        PREFIX "textures/sand.jpg",
+        PREFIX "textures/grass.jpg",
+        PREFIX "textures/stonyGrass.jpg",
+        PREFIX "textures/rocky.jpg",
+        PREFIX "textures/mountains.jpg",
+        PREFIX "textures/snow.jpg"
+    };
+
 };
 

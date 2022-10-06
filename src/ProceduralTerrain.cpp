@@ -7,8 +7,6 @@
 #include "ProceduralTerrain.h"
 #include "ResourceManager.h"
 
-#include <SGL/opengl/ShaderObject.h>
-
 
 static void ResizeCallback(GLFWwindow*, int, int);
 static void MouseMoveCallback(GLFWwindow*, double, double);
@@ -35,17 +33,18 @@ void ProceduralTerrain::CreateShaders()
 
 void ProceduralTerrain::CreateTextures()
 {
-    LoadTerrainTextures();
+    CreateProceduralTexture();
+    CreateTerrainTextureArray();
 }
 
 void ProceduralTerrain::CreateSceneObjects()
 {
     CreateCamera();
     CreateSkybox();
-    CreateProceduralTexture();
-    //CreateTerrainColorMap();
     CreateTerrain();
-}        
+    CreateTerrainUBO();
+    CreateLightingUBO();
+}
 
 void ProceduralTerrain::Start()    
 {
@@ -65,6 +64,9 @@ void ProceduralTerrain::SetupPreRenderStates()
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+    m_TexArray->Bind();
 
     CameraSetPresetTop();
 }
@@ -75,47 +77,18 @@ void ProceduralTerrain::Update(float dt)
 {
     m_Camera->Update(dt);
 
-    const glm::mat4& kProjMat = m_Camera->GetProjMat();
-    const glm::mat4& kViewMat = m_Camera->GetViewMat();
-    m_ProjViewMat = kProjMat * kViewMat;
+    m_ProjViewMat = m_Camera->GetProjMat() * m_Camera->GetViewMat();
 }
 
 void ProceduralTerrain::Render()
 {
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_TerrainShader->Use();
     m_TerrainShader->SetMat4("MVP", m_ProjViewMat * glm::mat4(1.0));
 
-    // TOOD only on change
-    const float kTerrainHeightScale = m_Terrain->GetHeightScale();
-    m_TerrainShader->SetFloat("uMinHeight", m_NoiseMap->GetMinValue() * kTerrainHeightScale );
-    m_TerrainShader->SetFloat("uMaxHeight", m_NoiseMap->GetMaxValue() * kTerrainHeightScale);
-
-    m_TerrainShader->SetInt("uColorCount", s_kColorRegions.size());
-
-    // TODO generator or smth, the best way to to this
-    std::vector<Color> colors(s_kColorRegions.size());
-    int i = 0;
-    for (auto region : s_kColorRegions)
-    {
-        colors[i] = region.color;
-        ++i;
-    }
-
-    m_TerrainShader->SetFloat3Array("uColors", colors.data(), colors.size());
-
-    std::vector<float> heights(s_kColorRegions.size());
-    i = 0;
-    for (auto region : s_kColorRegions)
-    {
-        heights[i] = region.startHeight; // TODO rename to start height or smth
-        ++i;
-    }
-    m_TerrainShader->SetFloatArray("uStartHeights", heights.data(), heights.size());
-
-    //m_ColorMap->Bind();
+    UpdateTerrainUBO();
+    UpdateLightingUBO();
 
     if (!m_RenderWireframe)
         m_Terrain->Render();
@@ -195,15 +168,6 @@ void ProceduralTerrain::CreateTerrainShaders()
     m_TerrainShader = sgl::Shader::Create({ vertShader, fragShader });
 }
 
-void ProceduralTerrain::LoadTerrainTextures()
-{
-    SGL_FUNCTION();
-    /*
-    for (auto texturePath : s_kTerrainTexturePaths)
-        ResourceManager::LoadTexture(texturePath, s_kForceRGB, s_kMipmaps);
-    */
-}
-
 void ProceduralTerrain::CreateCamera()
 {
     SGL_FUNCTION();
@@ -225,92 +189,90 @@ void ProceduralTerrain::CreateSkybox()
 void ProceduralTerrain::CreateProceduralTexture()
 {
     SGL_FUNCTION();
-    m_NoiseMap = ProceduralTexture2D::Create(m_TextureSize);
-    m_NoiseMap->SetScale(32.0f);
+    m_NoiseMap = ProceduralTexture2D::Create(m_TextureSize.x, m_TextureSize.y);
+    m_NoiseMap->SetScale(220.0);
+
     m_NoiseMap->GenerateValues();
+    m_NoiseMap->UpdateTexture();
+}
+
+std::vector<sgl::STBData> ProceduralTerrain::LoadTerrainTextures() const
+{
+    std::vector<sgl::STBData> imageData(s_kTerrainTexturePaths.size());
+
+    for (uint32_t i = 0; i < imageData.size(); ++i)
+    {
+        auto& data = imageData[i];
+        data.data = sgl::LoadImageData(s_kTerrainTexturePaths[i],
+                                       data.width, data.height,
+                                       data.channels);
+        SGL_ASSERT(data.Loaded());
+    }
+
+    return imageData;
+}
+
+void ProceduralTerrain::CreateTerrainTextureArray()
+{
+    SGL_FUNCTION();
+
+    std::vector<sgl::STBData> imgData = LoadTerrainTextures();
+
+    std::vector<const void*> data(imgData.size());
+    for (uint32_t i = 0; i < imgData.size(); ++i)
+    {
+        SGL_ASSERT(imgData[i].width <= m_TexArrayTexWidth);
+        SGL_ASSERT(imgData[i].height <= m_TexArrayTexHeight);
+        data[i] = static_cast<const void*>(imgData[i].data);
+    }
+    
+    m_TexArray = std::make_unique<sgl::Texture2DArray>(
+        sgl::Texture2DArray::TextureInfo{
+            m_TexArrayTexWidth,
+            m_TexArrayTexHeight,
+            m_TexArrayTexFormat,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
+            true
+        },  data );
 }
 
 void ProceduralTerrain::CreateTerrain()
 {
     SGL_FUNCTION();
-    /*
-    std::array<
-        std::shared_ptr<sgl::Shader>,
-        s_kTerrainShaderNames.size()
-    > shaders;
-
-    for (size_t i = 0; i < textures.size(); ++i)
-        shaders[i] =
-            ResourceManager::GetShader(s_kTerrainShaderNames[i]);
-
-    std::array<
-        std::shared_ptr<sgl::Texture2D>,
-        s_kTerrainTexturePaths.size()
-    > textures;
-
-    for (size_t i = 0; i < textures.size(); ++i)
-        textures[i] = 
-            ResourceManager::GetTexture(s_kTerrainTexturePaths[i]);
-    */
-
+    
     m_Terrain = Terrain::CreateUniq(
         m_TextureSize,
         m_NoiseMap->GetValues()
     );
+
+    m_Terrain->SetTileScale(0.05);
+    m_Terrain->SetHeightScale(10.0);
+    m_Terrain->Generate();
 }
 
-void ProceduralTerrain::CreateTerrainColorMap()
+void ProceduralTerrain::CreateTerrainUBO()
 {
-    SGL_FUNCTION();
-    FillColorRegionSearchMap();
-
-    std::vector<Color> colors = GenerateColorData();
-
-    m_ColorMap.reset();
-    m_ColorMap = sgl::Texture2D::Create({
-        m_TextureSize.x, m_TextureSize.y,
-        colors.data(),
-        GL_RGB8, GL_RGB, GL_FLOAT,
-        true
-    });
-    m_ColorMap->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-    m_ColorMap->SetFiltering(GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST);
+    m_TerrainUBO = std::make_unique<sgl::UniformBuffer>(
+        sizeof(TerrainUBO),
+        s_kTerrainUBOBindingPoint
+    );
 }
 
-void ProceduralTerrain::FillColorRegionSearchMap()
+void ProceduralTerrain::CreateLightingUBO()
 {
-    for (const auto& region : s_kColorRegions)
-    {
-        m_ColorRegionSearchMap[region.startHeight] = region.color;
-    }
-}
-
-std::vector<ProceduralTerrain::Color> ProceduralTerrain::GenerateColorData()
-{
-    std::vector<Color> colors(m_TextureSize.x * m_TextureSize.y);
-
-    for (uint32_t y = 0; y < m_TextureSize.y; ++y)
-        for (uint32_t x = 0; x < m_TextureSize.x; ++x)
-        {
-            const uint32_t kIndex = y*m_TextureSize.x + x;
-            const float kHeight = m_NoiseMap->operator[](kIndex);
-
-            const auto colorRangeIt =
-                m_ColorRegionSearchMap.upper_bound(kHeight);
-            if ( colorRangeIt != m_ColorRegionSearchMap.end() )
-                colors[kIndex] = colorRangeIt->second;
-            else
-                colors[kIndex] = s_kDefaultColor;
-        }
-
-    return colors;
+    m_LightingUBO = std::make_unique<sgl::UniformBuffer>(
+        sizeof(LightingUBO),
+        s_kLightingUBOBindingPoint
+    );
 }
 
 void ProceduralTerrain::CameraSetPresetTop()
 {
-    m_Camera->SetPosition(glm::vec3(0,m_TextureSize.y,0));
+    const float kHeight = m_Terrain->GetSize().y * m_Terrain->GetTileScale();
+    m_Camera->SetPosition(glm::vec3(0, kHeight ,0));
     m_Camera->SetPitch(-89);
-    m_Camera->SetYaw(180);
+    m_Camera->SetYaw(270);
     m_Camera->SetFOV(45);
 }
 
@@ -387,4 +349,59 @@ void ProceduralTerrain::OnKeyPressed(GLFWwindow *window, int key, int scancode,
         else
             SetStateModify();
     }
+}
+
+void ProceduralTerrain::AddNewRegion(const char* name)
+{
+    if ( m_Regions.size() >= s_kMaxRegionCount )
+        return;
+    
+    Region region;
+    region.name = name;
+    region.startHeight = m_Regions.empty() ? 0.0f : m_Regions.back().startHeight;
+    region.tint = s_kDefaultColor; // TODO randomize
+    region.blendStrength = 0.5;
+    region.tintStrength = 1.0;
+    region.scale = 1.0;
+
+    m_Regions.push_back(region);
+}
+
+void ProceduralTerrain::UpdateTerrainUBO()
+{
+    //if (!m_TerrainChanged)
+        //return;
+
+    const float kTerrainHeightScale = m_Terrain->GetHeightScale();
+
+    m_TerrainUBOData.minHeight = m_NoiseMap->GetMinValue() * kTerrainHeightScale;
+    m_TerrainUBOData.maxHeight = m_NoiseMap->GetMaxValue() * kTerrainHeightScale;
+    //m_TerrainChanged = false;
+
+    // TODO if regions changed
+
+    m_TerrainUBOData.regionCount = static_cast<int>(m_Regions.size());
+
+    SGL_ASSERT(m_Regions.size() <= s_kMaxRegionCount);
+
+    for (uint32_t i = 0; i < m_Regions.size(); ++i)
+    {
+        auto& region = m_TerrainUBOData.regions[i];
+
+        region.texScale = m_Regions[i].scale;
+        region.texIndex = m_Regions[i].texIndex;
+        region.tint = m_Regions[i].tint;
+        region.tintStrength = m_Regions[i].tintStrength;
+        region.blendStrength = m_Regions[i].blendStrength;
+        region.startHeight = m_Regions[i].startHeight;
+    }
+
+    // TODO null the rest?
+
+    m_TerrainUBO->SetData( &m_TerrainUBOData, sizeof(TerrainUBO) );
+}
+
+void ProceduralTerrain::UpdateLightingUBO() const
+{
+    m_LightingUBO->SetData( &m_LightingUBOData, sizeof(LightingUBO) );
 }
