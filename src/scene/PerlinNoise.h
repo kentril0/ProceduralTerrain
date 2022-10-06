@@ -23,15 +23,15 @@ template <typename T>
 class PerlinNoise
 {
 public:
-    PerlinNoise(uint32_t seed = std::random_device{}())
+    PerlinNoise(int32_t seed = std::random_device{}())
         : m_Seed(seed)
     {
         GeneratePermutations();
     }
 
-    uint32_t GetSeed() const { return m_Seed; }
+    int32_t GetSeed() const { return m_Seed; }
     /** @brief Just sets the seed, generate the permutations to see diff. */
-    void SetSeed(uint32_t seed) { m_Seed = seed; }
+    void SetSeed(int32_t seed) { m_Seed = seed; }
 
     /** @brief Generate random lookup for permutations containing all numbers
      * from 0..255 */
@@ -126,6 +126,6 @@ private:
     static const size_t PERMUTATION_COUNT = 256;
 
     std::array<uint32_t, PERMUTATION_COUNT*2> m_P;    ///< Permutations
-    uint32_t m_Seed{ 0 };
+    int32_t m_Seed{ 0 };
 };
 
