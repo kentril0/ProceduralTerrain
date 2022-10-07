@@ -68,7 +68,7 @@ private:
     void CreateTerrainUBO();
     void CreateLightingUBO();
     void UpdateTerrainUBO();
-    void UpdateLightingUBO() const;
+    void UpdateLightingUBO();
 
     void AddNewRegion(const char* name);
 
@@ -104,7 +104,6 @@ private:
     uint32_t m_TexArrayTexFormat = GL_RGB8;
 
     bool m_RenderWireframe{ false };
-    bool m_TerrainChanged{ true };
 
     // -------------------------------------------------------------------------
     // Terrain Regions
@@ -170,6 +169,8 @@ private:
 
     TerrainUBO m_TerrainUBOData;
     std::unique_ptr<sgl::UniformBuffer> m_TerrainUBO;
+    bool m_TerrainChanged{ true };
+    bool m_NoiseMapChanged{ false };
 
     struct LightingUBO
     {
@@ -188,6 +189,7 @@ private:
         glm::vec3(0.7, 0.3, 0.2),
     };
     std::unique_ptr<sgl::UniformBuffer> m_LightingUBO;
+    bool m_LightingOptionsChanged{ true };
 
     static constexpr uint32_t s_kTerrainUBOBindingPoint = 1;
     static constexpr uint32_t s_kLightingUBOBindingPoint = 2;

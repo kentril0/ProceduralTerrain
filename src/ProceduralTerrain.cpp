@@ -87,8 +87,11 @@ void ProceduralTerrain::Render()
     m_TerrainShader->Use();
     m_TerrainShader->SetMat4("MVP", m_ProjViewMat * glm::mat4(1.0));
 
-    UpdateTerrainUBO();
-    UpdateLightingUBO();
+    if (m_TerrainChanged)
+        UpdateTerrainUBO();
+
+    if (m_LightingOptionsChanged)
+        UpdateLightingUBO();
 
     if (!m_RenderWireframe)
         m_Terrain->Render();
@@ -369,9 +372,6 @@ void ProceduralTerrain::AddNewRegion(const char* name)
 
 void ProceduralTerrain::UpdateTerrainUBO()
 {
-    //if (!m_TerrainChanged)
-        //return;
-
     const float kTerrainHeightScale = m_Terrain->GetHeightScale();
 
     m_TerrainUBOData.minHeight = m_NoiseMap->GetMinValue() * kTerrainHeightScale;
@@ -399,9 +399,13 @@ void ProceduralTerrain::UpdateTerrainUBO()
     // TODO null the rest?
 
     m_TerrainUBO->SetData( &m_TerrainUBOData, sizeof(TerrainUBO) );
+
+    m_TerrainChanged = false;
 }
 
-void ProceduralTerrain::UpdateLightingUBO() const
+void ProceduralTerrain::UpdateLightingUBO()
 {
     m_LightingUBO->SetData( &m_LightingUBOData, sizeof(LightingUBO) );
+
+    m_LightingOptionsChanged = false;
 }
