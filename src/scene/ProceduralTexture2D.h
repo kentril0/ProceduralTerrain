@@ -59,7 +59,10 @@ public:
 
     // Noise function settings
 
-    void SetSeed(int32_t seed) { m_FractalNoise.perlinNoise.SetSeed(seed); }
+    void SetSeed(int32_t seed) {
+        m_FractalNoise.perlinNoise.SetSeed(seed);
+        m_FractalNoise.perlinNoise.GeneratePermutations();
+    }
     void SetOctaves(int octaves) { m_FractalNoise.octaveCount = octaves; }
     void SetScale(float scale);
     void SetOffset(float offset) { m_FractalNoise.offset = offset; }
