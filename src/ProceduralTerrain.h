@@ -70,8 +70,6 @@ private:
     void UpdateTerrainUBO();
     void UpdateLightingUBO();
 
-    void AddNewRegion(const char* name);
-
 private:
     enum class State
     {
@@ -128,8 +126,14 @@ private:
         float scale;
         float tintStrength;
         float blendStrength;
+
+        Region();
+        Region(int id);
+        Region(const std::string& name);
+        Region(float startHeight, const std::string& name, Color tint,
+               int texIndex, float scale, float tintStrength,
+               float blendStrength);
     };
-    // TODO global blendStrength, tintStrength, scale
 
     std::vector<Region> m_Regions{
         { 0.0, "Water Deep", Color(0.0, 0.0, 0.8), TEX_WATER, 2.0, 0.1, 0.2 },

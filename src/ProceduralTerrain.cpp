@@ -354,22 +354,6 @@ void ProceduralTerrain::OnKeyPressed(GLFWwindow *window, int key, int scancode,
     }
 }
 
-void ProceduralTerrain::AddNewRegion(const char* name)
-{
-    if ( m_Regions.size() >= s_kMaxRegionCount )
-        return;
-    
-    Region region;
-    region.name = name;
-    region.startHeight = m_Regions.empty() ? 0.0f : m_Regions.back().startHeight;
-    region.tint = s_kDefaultColor; // TODO randomize
-    region.blendStrength = 0.5;
-    region.tintStrength = 1.0;
-    region.scale = 1.0;
-
-    m_Regions.push_back(region);
-}
-
 void ProceduralTerrain::UpdateTerrainUBO()
 {
     const float kTerrainHeightScale = m_Terrain->GetHeightScale();
@@ -408,4 +392,42 @@ void ProceduralTerrain::UpdateLightingUBO()
     m_LightingUBO->SetData( &m_LightingUBOData, sizeof(LightingUBO) );
 
     m_LightingOptionsChanged = false;
+}
+
+ProceduralTerrain::Region::Region()
+    : startHeight(0.0),
+      name(""),
+      tint(s_kDefaultColor),
+      texIndex(0),
+      scale(1.0),
+      tintStrength(0.1),
+      blendStrength(0.1)
+{
+
+}
+
+ProceduralTerrain::Region::Region(int n)
+    : Region()
+{
+    name = "Region " + std::to_string(n);
+}
+
+ProceduralTerrain::Region::Region(const std::string& newName)
+    : Region()
+{
+    name = newName;
+}
+
+ProceduralTerrain::Region::Region(
+    float sh, const std::string& newName, Color c, int tID,
+    float sc, float tintStr, float blendStr)
+    : startHeight(sh),
+      name(newName),
+      tint(c),
+      texIndex(tID),
+      scale(sc),
+      tintStrength(tintStr),
+      blendStrength(blendStr)
+{
+
 }

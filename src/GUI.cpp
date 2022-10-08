@@ -172,7 +172,7 @@ void ProceduralTerrain::ShowInterface()
         ImGui::Separator();
         
         ImGui::Separator();
-        if (ImGui::TreeNodeEx("Regions", ImGuiTreeNodeFlags_DefaultOpen))
+        if (ImGui::TreeNodeEx("Regions"))
         {
             // TODO global settings
             ImGui::Text("Global settings");
@@ -181,12 +181,18 @@ void ProceduralTerrain::ShowInterface()
             static float globalBlendStrength = m_Regions.size() > 0 ? m_Regions[0].blendStrength : 0.0;
             static float globalTextureScale = m_Regions.size() > 0 ? m_Regions[0].scale : 1.0;
 
+            ImGui::PushItemWidth(200);
             bool globalOptionsChanged =
                 ImGui::DragFloat("Tint Strength", &globalTintStrength, 0.01f, 0.0f, 1.0f);
             globalOptionsChanged |=
                 ImGui::DragFloat("Blend range", &globalBlendStrength, 0.01f, 0.0f, 1.0f);
             globalOptionsChanged |=
                 ImGui::DragFloat("Texture Scale", &globalTextureScale, 0.1f, 0.0f, 100.0f);
+
+            static const std::string kStrMaxRegionCount =
+                std::to_string(s_kMaxRegionCount);
+            ImGui::LabelText(kStrMaxRegionCount.c_str(), "Maximum number of regions:");
+            ImGui::PopItemWidth();
 
             ImGui::Separator();
 
@@ -202,10 +208,31 @@ void ProceduralTerrain::ShowInterface()
                     changed = true;
                 }
 
+                bool AddRegionOptionsShown = false;
                 ImGui::PushID(i);
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 if ( ImGui::TreeNode(region.name.c_str()) )
                 {
+                    ImGui::SameLine();
+                    if (m_Regions.size() < s_kMaxRegionCount && ImGui::Button("+"))
+                    {
+                        // Insert region
+                        if (m_Regions.size() < s_kMaxRegionCount)
+                        {
+                            m_Regions.insert(m_Regions.begin() + i, Region(m_Regions.size()));
+                            m_TerrainChanged = true;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("-"))
+                    {
+                        m_Regions.erase(m_Regions.begin() + i);
+                        m_TerrainChanged = true;
+                    }
+                    AddRegionOptionsShown = true;
+
+                    ImGui::PushItemWidth(256);
+
                     changed |= ImGui::DragFloat("Start Height", &region.startHeight, 0.01f, 0.0f, 1.0f);
                     changed |= ImGui::ColorEdit3("Tint", glm::value_ptr(region.tint));
                     changed |= ImGui::Combo("Texture", &region.texIndex,
@@ -214,32 +241,56 @@ void ProceduralTerrain::ShowInterface()
                     changed |= ImGui::DragFloat("Tint Strength", &region.tintStrength, 0.01f, 0.0f, 1.0f);
                     changed |= ImGui::DragFloat("Blend range", &region.blendStrength, 0.01f, 0.0f, 1.0f);
                     changed |= ImGui::DragFloat("Texture Scale", &region.scale, 0.1f, 0.0f, 100.0f);
+
+                    ImGui::PopItemWidth();
                     ImGui::TreePop();
                 }
+                if (!AddRegionOptionsShown)
+                {
+                    ImGui::SameLine();
+                    if (m_Regions.size() < s_kMaxRegionCount && ImGui::Button("+"))
+                    {
+                        // Insert region
+                        if (m_Regions.size() < s_kMaxRegionCount)
+                        {
+                            m_Regions.insert(m_Regions.begin() + i, Region(m_Regions.size()));
+                            m_TerrainChanged = true;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("-"))
+                    {
+                        m_Regions.erase(m_Regions.begin() + i);
+                            m_TerrainChanged = true;
+                    }
+                }
+
                 ImGui::PopID();
             }
 
-            /*
             static bool addRegionState = false;
             static char inputRegionName[65];
 
-            if (!addRegionState)
+            if ( m_Regions.size() < s_kMaxRegionCount )
             {
-                if ( ImGui::Button("Add Region") )
-                    addRegionState = true;
-            }
-            else
-            {
-                ImGui::InputText("Name", inputRegionName,
-                                 IM_ARRAYSIZE(inputRegionName) );
-                if ( ImGui::Button("Add Region") )
+                if (!addRegionState)
                 {
-                    AddNewRegion(inputRegionName);
-                    inputRegionName[0] = '\0';
-                    addRegionState = false;
+                    if ( ImGui::Button("Add Region") )
+                        addRegionState = true;
+                }
+                else
+                {
+                    ImGui::InputText("Name", inputRegionName,
+                                     IM_ARRAYSIZE(inputRegionName) );
+                    if ( ImGui::Button("Add Region") )
+                    {
+                        m_Regions.emplace_back(inputRegionName);
+                            m_TerrainChanged = true;
+                        inputRegionName[0] = '\0';
+                        addRegionState = false;
+                    }
                 }
             }
-            */
 
             ImGui::Separator();
             ImGui::TreePop();
