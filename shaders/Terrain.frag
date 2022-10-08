@@ -82,12 +82,13 @@ void main()
 {
     vec3 blendAxis = abs(inNormal);
     blendAxis /= blendAxis.x + blendAxis.y + blendAxis.z;
-    
-    vec3 color = vec3(0);
 
     const float kHeightPercent = InverseLerp(terrain.minHeight, terrain.maxHeight, inPos.y);
 
-    for (int i = 0; i < terrain.regionCount; ++i)
+    vec3 color = vec3(0);
+    const int kRegionCount = min(terrain.regionCount, REGION_MAX_COUNT);
+
+    for (int i = 0; i < kRegionCount; ++i)
     {
         const Region region = terrain.regions[i];
 
