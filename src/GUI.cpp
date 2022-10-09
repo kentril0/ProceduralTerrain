@@ -71,11 +71,14 @@ void ProceduralTerrain::ShowInterface()
         {
             static bool optionsChanged = false;
             static bool autoUpdate = false;
+            static bool useFallOffMap = false;
             
             static int terrainSize = m_Terrain->GetSize().x;
             static int terrainLastSize = terrainSize;
             static float tileScale = m_Terrain->GetTileScale();
             static float heightScale = m_Terrain->GetHeightScale();
+            static float edge0 = m_Terrain->GetFallOffMapEdge0();
+            static float edge1 = m_Terrain->GetFallOffMapEdge1();
 
             // (?) Resizes the terrain along with its height map
             optionsChanged |= ImGui::SliderInt("Terrain size", &terrainSize, 4, 2048);
@@ -83,6 +86,14 @@ void ProceduralTerrain::ShowInterface()
             optionsChanged |= ImGui::SliderFloat("Tile scale", &tileScale, 0.01f, 1.f);
             // (?) Scales the height values of terrain's height map
             optionsChanged |= ImGui::SliderFloat("Height scale", &heightScale, 1.f, 32.f);
+            optionsChanged |= ImGui::Checkbox(" Use Falloff Map", &useFallOffMap);
+            if (useFallOffMap)
+            {
+                optionsChanged |=
+                    ImGui::SliderFloat("Edge0", &edge0, 0.f, edge1-0.01);
+                optionsChanged |=
+                    ImGui::SliderFloat("Edge1", &edge1, edge0+0.01, 2.f);
+            }
 
             ImGui::NewLine();
             const bool kGeneratePressed = ImGui::Button("Generate");
@@ -101,6 +112,9 @@ void ProceduralTerrain::ShowInterface()
 
                 m_Terrain->SetTileScale(tileScale);
                 m_Terrain->SetHeightScale(heightScale);
+                m_Terrain->UseFallOffMap(useFallOffMap);
+                m_Terrain->SetFallOffMapEdge0(edge0);
+                m_Terrain->SetFallOffMapEdge1(edge1);
                 m_Terrain->Generate();
 
                 optionsChanged = false;

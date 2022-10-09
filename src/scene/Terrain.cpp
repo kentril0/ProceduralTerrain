@@ -47,6 +47,13 @@ void Terrain::Generate()
 {
     GenerateTexCoords();
     GeneratePositions();
+
+    if (m_UseFallOffMap)
+    {
+        GenerateFallOffMap();
+        ApplyFallOffMap();
+    }
+
     GenerateIndices();
     GenerateNormals();
 
@@ -193,3 +200,35 @@ void Terrain::Render() const
                    GL_UNSIGNED_INT, 0);
 }
 
+void Terrain::GenerateFallOffMap()
+{
+    m_FallOffMap.resize(m_Size.x * m_Size.y);
+
+    for (uint32_t y = 0; y < m_Size.y; ++y)
+        for (uint32_t x = 0; x < m_Size.x; ++x)
+        {
+            m_FallOffMap[y * m_Size.x + x] =
+                Smoothstep(m_FallOffEdge0,
+                           m_FallOffEdge1,
+                           glm::max(
+                            glm::abs(x / static_cast<float>(m_Size.x)*2.f-1.f),
+                            glm::abs(y / static_cast<float>(m_Size.y)*2.f-1.f)
+                           )
+                );
+        }
+}
+
+void Terrain::ApplyFallOffMap()
+{
+    for (uint32_t y = 0; y < m_Size.y; ++y)
+        for (uint32_t x = 0; x < m_Size.x; ++x)
+        {
+            const uint32_t kIndex = y * m_Size.x + x;
+            m_Positions[kIndex].y =
+                glm::clamp(
+                    m_HeightMap[kIndex] - m_FallOffMap[kIndex],
+                    0.f,
+                    1.f)
+                * m_HeightScale;
+        }
+}

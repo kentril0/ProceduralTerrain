@@ -39,9 +39,10 @@ public:
     /**
      * @brief Recreates vertex data based on set values of data members
      *   and heightMap values */
+    // TODO call it "Update?"
     void Generate();
 
-    void EnableFallOff(bool enable) {}
+    void UseFallOffMap(bool enabled) { m_UseFallOffMap = enabled; }
 
     // Getters
     glm::uvec2 GetSize() const { return m_Size; }
@@ -51,11 +52,16 @@ public:
     size_t GetVertexCount() const { return m_Size.x * m_Size.y; }
     size_t GetIndexCount() const { return m_Indices.size(); }
     size_t GetTriangleCount() const { return 0; }
+    float GetFallOffMapEdge0() const { return m_FallOffEdge0; }
+    float GetFallOffMapEdge1() const { return m_FallOffEdge1; }
 
     // Setters
     void SetSize(const glm::vec2& size) { m_Size = size; }
     void SetTileScale(float scale) { m_TileScale = scale; }
     void SetHeightScale(float scale) { m_HeightScale = scale; }
+
+    void SetFallOffMapEdge0(float edge0) { m_FallOffEdge0 = edge0; }
+    void SetFallOffMapEdge1(float edge1) { m_FallOffEdge1 = edge1; }
 
 private:
     using Position = glm::vec3;
@@ -73,6 +79,7 @@ private:
     };
 
 private:
+    // @return TODO should be in range [0,1]
     inline float GetHeight(size_t index) const
     {
         return m_HeightMap[ glm::min(index, m_HeightMap.size()-1) ];
@@ -98,6 +105,14 @@ private:
     void FillColorRegionSearchMap();
     void GenerateColorData();
 
+    void GenerateFallOffMap();
+    void ApplyFallOffMap();
+
+    constexpr float Smoothstep(float edge0, float edge1, float x) const {
+        float t = glm::clamp((x - edge0) / (edge1 - edge0), 0.f, 1.f);
+        return t * t * (3.f - 2.f * t);
+    }
+
 private:
     const std::vector<float>& m_HeightMap;
 
@@ -115,4 +130,13 @@ private:
     std::vector<Index>  m_Indices;
 
     sgl::VertexArray m_VAO;
+
+    // -------------------------------------------------------------------------
+    // Falloff map
+
+    std::vector<float> m_FallOffMap;
+    bool m_UseFallOffMap{ false };
+
+    float m_FallOffEdge0{ 0.0 };
+    float m_FallOffEdge1{ 1.0 };
 };
