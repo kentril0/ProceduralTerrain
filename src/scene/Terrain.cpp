@@ -162,12 +162,6 @@ void Terrain::GenerateNormals()
     }
 }
 
-glm::vec2 Terrain::GetWorldSize() const
-{
-    return glm::vec2((float)(m_Size.x-1) * m_TileScale, 
-                     (float)(m_Size.y-1) * m_TileScale);
-}
-
 void Terrain::UpdateVAO()
 {
     SGL_PROFILE_SCOPE();

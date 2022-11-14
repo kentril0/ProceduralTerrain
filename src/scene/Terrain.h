@@ -44,8 +44,19 @@ public:
 
     void UseFallOffMap(bool enabled) { m_UseFallOffMap = enabled; }
 
-    // Getters
+    // -------------------------------------------------------------------------
+
+    /** @return Size of the terrain in X and Z coordinates */
     glm::uvec2 GetSize() const { return m_Size; }
+
+    /** 
+     * @return Size of the terrain in X and Z coordinates scaled to world units
+     */
+    glm::vec2 GetWorldSize() const {
+        return glm::vec2((float)(m_Size.x-1) * m_TileScale, 
+                         (float)(m_Size.y-1) * m_TileScale);
+    }
+
     float GetTileScale() const { return m_TileScale; }
     float GetHeightScale() const { return m_HeightScale; }
 
@@ -56,7 +67,8 @@ public:
     float GetFallOffMapEdge0() const { return m_FallOffEdge0; }
     float GetFallOffMapEdge1() const { return m_FallOffEdge1; }
 
-    // Setters
+    // -------------------------------------------------------------------------
+
     void SetSize(const glm::vec2& size) { m_Size = size; }
     void SetTileScale(float scale) { m_TileScale = scale; }
     void SetHeightScale(float scale) { m_HeightScale = scale; }
@@ -90,9 +102,6 @@ private:
     {
         return GetHeight(index) * m_HeightScale;
     }
-
-    // Positions in world units are [0, ..., size-1] 
-    glm::vec2 GetWorldSize() const;
 
     // Generates values from top-left (0,0) to bottom right (1,1)
     void GenerateTexCoords();
