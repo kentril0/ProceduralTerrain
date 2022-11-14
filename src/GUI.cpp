@@ -353,9 +353,27 @@ void ProceduralTerrain::StatusWindow()
     // frametime and FPS
     ImGui::Text("ProceduralTerrain average %.3f ms/frame (%.1f FPS)", 
                 1000.0f / io.Framerate, io.Framerate);
-    ImGui::Text("%ld vertices, %ld indices (%ld triangles)", 
+    ImGui::Text("%u vertices, %u indices (%u triangles)", 
                 m_Terrain->GetVertexCount(), m_Terrain->GetIndexCount(),
                 m_Terrain->GetTriangleCount());
+
+    ImGui::Text("Profiling data");
+    if ( ImGui::BeginTable("Profiling data", 2,
+                            ImGuiTableFlags_Resizable |
+                            ImGuiTableFlags_BordersOuter |
+                            ImGuiTableFlags_BordersV) )
+    {
+        const auto& kRecords = sgl::Profile::GetRecordsFromLatest();
+        for (const auto& record : kRecords)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("%.3f ms", record.duration);
+            ImGui::TableNextColumn();
+            ImGui::Text("%s::%s", record.fileName, record.name);
+        }
+        ImGui::EndTable();
+    }
 
     ImGui::End();
 }
