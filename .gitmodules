@@ -1,0 +1,4 @@
+[submodule "libs/SGL"]
+	path = libs/SGL
+	url = https://github.com/kentril0/SimpleGraphicsLibrary
+	branch = develop
