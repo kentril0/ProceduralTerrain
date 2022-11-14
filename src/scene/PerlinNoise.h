@@ -30,7 +30,7 @@ public:
     }
 
     int32_t GetSeed() const { return m_Seed; }
-    /** @brief Just sets the seed, generate the permutations to see diff. */
+    /** @brief Just sets the seed, generate the permutations to see the diff. */
     void SetSeed(int32_t seed) { m_Seed = seed; }
 
     /** @brief Generate random lookup for permutations containing all numbers
