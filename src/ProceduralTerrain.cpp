@@ -274,7 +274,8 @@ void ProceduralTerrain::CreateLightingUBO()
 
 void ProceduralTerrain::CameraSetPresetTop()
 {
-    const float kHeight = m_Terrain->GetSize().y * m_Terrain->GetTileScale();
+    const float kHeight = m_Terrain->GetWorldSize().y;
+
     m_Camera->SetPosition(glm::vec3(0, kHeight ,0));
     m_Camera->SetPitch(-89);
     m_Camera->SetYaw(270);
@@ -283,16 +284,22 @@ void ProceduralTerrain::CameraSetPresetTop()
 
 void ProceduralTerrain::CameraSetPresetFront()
 {
-    m_Camera->SetPosition(glm::vec3(0,30,90));
-    m_Camera->SetPitch(-20);
+    const float zPos = m_Terrain->GetWorldSize().y * 0.6f;
+    const float kHeight = m_Terrain->GetHeightScale() * 1.5f + zPos * 0.1f;
+
+    m_Camera->SetPosition(glm::vec3(0, kHeight, zPos));
+    m_Camera->SetPitch(-30);
     m_Camera->SetYaw(270);
     m_Camera->SetFOV(45);
 }
 
 void ProceduralTerrain::CameraSetPresetSideways()
 {
-    m_Camera->SetPosition(glm::vec3(60,32,65));
-    m_Camera->SetPitch(-36);
+    const float kHeight = m_Terrain->GetHeightScale() * 1.5f;
+    const glm::vec2 kDiagonal = m_Terrain->GetWorldSize() * 0.3f * glm::sqrt(2.f);
+
+    m_Camera->SetPosition(glm::vec3(kDiagonal.x, kHeight, kDiagonal.y));
+    m_Camera->SetPitch(-30);
     m_Camera->SetYaw(230);
     m_Camera->SetFOV(45);
 }
