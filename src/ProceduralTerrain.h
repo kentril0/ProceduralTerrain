@@ -8,7 +8,9 @@
 #include <memory>
 #include <unordered_map>
 
+#define SGL_DEBUG
 #define SGL_USE_IMGUI
+#define SGL_PROFILE
 #include <SGL/SGL.h>
 
 #include "scene/Camera.h"
@@ -178,20 +180,14 @@ private:
 
     struct LightingUBO
     {
-        glm::vec3 sunColor;
-        float sunIntensity;
-        alignas(16) glm::vec3 sunDir;
-        alignas(16) glm::vec3 skyColor;
-        alignas(16) glm::vec3 bounceColor;
+        glm::vec3 sunColor{0.7, 0.45, 0.3};
+        float sunIntensity{ 2.2 };
+        alignas(16) glm::vec3 sunDir{0.8, 0.4, 0.2};
+        alignas(16) glm::vec3 skyColor{0.5, 0.8, 0.9};
+        alignas(16) glm::vec3 bounceColor{0.7, 0.3, 0.2};
     };
 
-    LightingUBO m_LightingUBOData{
-        glm::vec3(0.7, 0.45, 0.3),
-        2.2,
-        glm::vec3(0.8, 0.4, 0.2),
-        glm::vec3(0.5, 0.8, 0.9),
-        glm::vec3(0.7, 0.3, 0.2),
-    };
+    LightingUBO m_LightingUBOData{};
     std::unique_ptr<sgl::UniformBuffer> m_LightingUBO;
     bool m_LightingOptionsChanged{ true };
 

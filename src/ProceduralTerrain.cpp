@@ -3,7 +3,6 @@
  * (http://opensource.org/licenses/MIT)
  */
 
-#define SGL_DEBUG
 #include "ProceduralTerrain.h"
 #include "ResourceManager.h"
 
@@ -14,6 +13,7 @@ static void MousePressedCallback(GLFWwindow*, int, int, int);
 static void KeyPressedCallback(GLFWwindow*, int, int, int, int);
 
 ProceduralTerrain::ProceduralTerrain()
+    : Application()
 {
     CreateShaders();
     CreateTextures();
@@ -56,6 +56,8 @@ void ProceduralTerrain::Start()
     m_Window->SetCursorPosCallback(MouseMoveCallback);
     m_Window->SetMouseButtonCallback(MousePressedCallback);
     m_Window->SetKeyCallback(KeyPressedCallback);
+
+    m_ShowStatusWindow = false;
 }
 
 void ProceduralTerrain::SetupPreRenderStates()
