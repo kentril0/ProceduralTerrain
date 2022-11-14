@@ -49,9 +49,10 @@ public:
     float GetTileScale() const { return m_TileScale; }
     float GetHeightScale() const { return m_HeightScale; }
 
-    size_t GetVertexCount() const { return m_Size.x * m_Size.y; }
-    size_t GetIndexCount() const { return m_Indices.size(); }
-    size_t GetTriangleCount() const { return 0; }
+    uint32_t GetVertexCount() const { return m_Size.x * m_Size.y; }
+    uint32_t GetIndexCount() const { return m_Indices.size(); }
+    uint32_t GetTriangleCount() const { return m_Indices.size() / 3; }
+
     float GetFallOffMapEdge0() const { return m_FallOffEdge0; }
     float GetFallOffMapEdge1() const { return m_FallOffEdge1; }
 

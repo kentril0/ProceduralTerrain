@@ -11,9 +11,8 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
-// TODO better
-#define SGL_DEBUG
-#define SGL_ENABLE_ASSERTS
+
+#define SGL_PROFILE
 #include <SGL/SGL.h>
 
 #define TRIANGLES_PER_QUAD 2
@@ -45,6 +44,8 @@ Terrain::~Terrain()
 
 void Terrain::Generate()
 {
+    SGL_PROFILE_SCOPE();
+
     GenerateTexCoords();
     GeneratePositions();
 
@@ -62,29 +63,36 @@ void Terrain::Generate()
 
 void Terrain::GenerateTexCoords()
 {
+    SGL_PROFILE_SCOPE();
+
+    const glm::uvec2 kSize = m_Size;
     m_TexCoords.resize( GetVertexCount() );
 
-    for (uint32_t y = 0; y < m_Size.y; ++y)
-        for (uint32_t x = 0; x < m_Size.x; ++x)
+    for (uint32_t y = 0; y < kSize.y; ++y)
+        for (uint32_t x = 0; x < kSize.x; ++x)
         {
-            const uint32_t kIndex = y * m_Size.x + x;
-            m_TexCoords[kIndex].x = x / static_cast<float>(m_Size.x - 1);
-            m_TexCoords[kIndex].y = y / static_cast<float>(m_Size.y - 1);
+            const uint32_t kIndex = y * kSize.x + x;
+            m_TexCoords[kIndex].x = x / static_cast<float>(kSize.x - 1);
+            m_TexCoords[kIndex].y = y / static_cast<float>(kSize.y - 1);
         }
 }
 
 void Terrain::GeneratePositions()
 {
+    SGL_PROFILE_SCOPE();
+
+    const glm::vec2 kSize = m_Size;
+
     // Account for tile scaling
     const glm::vec2 kWorldSize = GetWorldSize();
     const glm::vec2 kCenterOffset = kWorldSize*0.5f;
 
     m_Positions.resize( GetVertexCount() );
 
-    for (uint32_t y = 0; y < m_Size.y; ++y)
-        for (uint32_t x = 0; x < m_Size.x; ++x)
+    for (uint32_t y = 0; y < kSize.y; ++y)
+        for (uint32_t x = 0; x < kSize.x; ++x)
         {
-            const uint32_t kIndex = y * m_Size.x + x;
+            const uint32_t kIndex = y * kSize.x + x;
             auto& position = m_Positions[kIndex];
 
             position.x = m_TexCoords[kIndex].x * kWorldSize.x - kCenterOffset.x;
@@ -95,6 +103,8 @@ void Terrain::GeneratePositions()
 
 void Terrain::GenerateIndices()
 {
+    SGL_PROFILE_SCOPE();
+
     const glm::vec2 kSize = m_Size - 1U;
 
     m_Indices.resize(kSize.x*kSize.y *
@@ -118,10 +128,14 @@ void Terrain::GenerateIndices()
 
 void Terrain::GenerateNormals()
 {
-    m_Normals.resize( GetVertexCount(), glm::vec3(0.0f) );
-    SGL_ASSERT(m_Indices.size() % 3 == 0 )
+    SGL_PROFILE_SCOPE();
 
-    for (uint32_t i = 0; i < m_Indices.size(); i += 3)
+    m_Normals.resize( GetVertexCount(), Normal(0.0f) );
+
+    const uint32_t kIndexCount = GetIndexCount();
+    SGL_ASSERT(kIndexCount % INDICES_PER_TRIANGLE == 0 )
+
+    for (uint32_t i = 0; i < kIndexCount; i += INDICES_PER_TRIANGLE)
     {
         const auto kIdx1 = m_Indices[i + 0];
         const auto kIdx2 = m_Indices[i + 1];
@@ -156,6 +170,8 @@ glm::vec2 Terrain::GetWorldSize() const
 
 void Terrain::UpdateVAO()
 {
+    SGL_PROFILE_SCOPE();
+
     const auto kVertexCount = GetVertexCount();
     std::vector<Vertex> vertices(kVertexCount);
 
@@ -189,6 +205,8 @@ void Terrain::UpdateVAO()
 
     m_VAO.AddVertexBuffer(vbo);
     m_VAO.SetIndexBuffer(ibo);
+
+    // TODO clear generated data
 }
 
 void Terrain::Render() const
@@ -202,6 +220,8 @@ void Terrain::Render() const
 
 void Terrain::GenerateFallOffMap()
 {
+    SGL_PROFILE_SCOPE();
+
     m_FallOffMap.resize(m_Size.x * m_Size.y);
 
     for (uint32_t y = 0; y < m_Size.y; ++y)
@@ -220,6 +240,8 @@ void Terrain::GenerateFallOffMap()
 
 void Terrain::ApplyFallOffMap()
 {
+    SGL_PROFILE_SCOPE();
+
     for (uint32_t y = 0; y < m_Size.y; ++y)
         for (uint32_t x = 0; x < m_Size.x; ++x)
         {
