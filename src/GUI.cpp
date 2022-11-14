@@ -40,7 +40,7 @@ void ProceduralTerrain::ShowInterface()
         float pitch = m_Camera->GetPitch();
         float yaw = m_Camera->GetYaw();
 
-        if (ImGui::DragFloat3("Position", glm::value_ptr(pos)))
+        if (ImGui::DragFloat3("Position", glm::value_ptr(pos), 0.1f))
             m_Camera->SetPosition(pos);
         if (ImGui::SliderFloat("Pitch angle", &pitch, -89.f, 89.f, "%.0f deg"))
             m_Camera->SetPitch(pitch);
