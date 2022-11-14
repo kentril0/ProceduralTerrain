@@ -9,6 +9,7 @@
 #include <vector>
 #include <limits>
 
+#define SGL_PROFILE
 #include <SGL/SGL.h>
 
 
@@ -32,7 +33,7 @@ ProceduralTexture2D::ProceduralTexture2D(uint32_t width, uint32_t height)
 
 void ProceduralTexture2D::GenerateValues()
 {
-    // TODO time
+    SGL_PROFILE_SCOPE();
 
     m_Values.resize(m_Width * m_Height);
 
@@ -54,6 +55,8 @@ void ProceduralTexture2D::GenerateValues()
 
 void ProceduralTexture2D::UpdateTexture()
 {
+    SGL_PROFILE_SCOPE();
+
     std::vector<glm::vec3> grayscaleValues;
     grayscaleValues.reserve(m_Values.size());
     std::transform(m_Values.begin(), m_Values.end(),
